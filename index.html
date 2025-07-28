@@ -47,18 +47,19 @@
     .control-btn:active {
       background: #555;
     }
+
     #minesweeper {
       display: none;
       margin: 20px auto;
       border-collapse: collapse;
     }
     #minesweeper td {
-      width: 32px;
-      height: 32px;
+      width: 48px;
+      height: 48px;
       background: #222;
       border: 1px solid #444;
       color: #fff;
-      font-size: 1.2em;
+      font-size: 1.6em;
       cursor: pointer;
       text-align: center;
       vertical-align: middle;
@@ -75,66 +76,61 @@
       background: #557;
       color: #ff0;
     }
+
     @media (max-width: 700px) {
       canvas { width: 98vw !important; height: 98vw !important; max-width: 98vw; max-height:98vw;}
-      #minesweeper td { width: 8vw; height: 8vw; font-size: 5vw;}
+      #minesweeper td { width: 10vw; height: 10vw; font-size: 6vw;}
     }
   </style>
 </head>
 <body>
   <h1>Mini Juegos</h1>
   <p id="status">Cargando Snake...</p>
-  <!-- Snake -->
+  <p style="color: #ccc; font-size: 0.9em;">Usá clic derecho o mantené presionado para marcar minas 🚩</p>
+
   <canvas id="snakeCanvas" width="600" height="600"></canvas>
   <div class="controls" id="snakeControls" style="display:none;">
-    <div class="control-row">
-      <button class="control-btn" data-dir="UP">▲</button>
-    </div>
+    <div class="control-row"><button class="control-btn" data-dir="UP">▲</button></div>
     <div class="control-row">
       <button class="control-btn" data-dir="LEFT">◀</button>
       <div style="width: 30px;"></div>
       <button class="control-btn" data-dir="RIGHT">▶</button>
     </div>
-    <div class="control-row">
-      <button class="control-btn" data-dir="DOWN">▼</button>
-    </div>
+    <div class="control-row"><button class="control-btn" data-dir="DOWN">▼</button></div>
   </div>
-  <!-- Buscaminas -->
+
   <table id="minesweeper"></table>
+
   <script>
-    // ==== SNAKE ====
+    // --- Snake ---
     let stage = "snake";
     const canvas = document.getElementById("snakeCanvas");
     const ctx = canvas.getContext("2d");
     const box = 30;
     const gridCount = 20;
-    const edgeMargin = 1;
     let snake = [{ x: 10 * box, y: 10 * box }];
     let direction = "RIGHT";
     let fruit = {};
     let score = 0;
-    const fruitTarget = 2;
+    const fruitTarget = 9;
 
-    // Imagen: Cambia aquí si tu archivo tiene otro nombre
     const appleImg = new Image();
-    appleImg.src = "IMG_20250728_161829.png"; // Cambia "apple.png" por el nombre exacto de tu imagen si es necesario
+    appleImg.src = "IMG_20250728_161829.png";
     appleImg.onload = startSnake;
     appleImg.onerror = () => {
       document.getElementById("status").innerText =
-        "No se pudo cargar la imagen de la manzana. ¿Está el archivo apple.png en la carpeta?";
+        "No se pudo cargar la imagen de la manzana.";
     };
 
     let lastMoveTime = 0;
     const moveInterval = 140;
 
     function randomFruitPosition() {
-      let min = edgeMargin;
-      let max = gridCount - 1 - edgeMargin;
       let pos, collision;
       do {
         pos = {
-          x: Math.floor(Math.random() * (max - min + 1) + min) * box,
-          y: Math.floor(Math.random() * (max - min + 1) + min) * box
+          x: Math.floor(Math.random() * gridCount) * box,
+          y: Math.floor(Math.random() * gridCount) * box
         };
         collision = snake.some(seg => seg.x === pos.x && seg.y === pos.y);
       } while (collision);
@@ -149,10 +145,8 @@
       if (direction === "DOWN") head.y += box;
 
       if (
-        head.x < 0 ||
-        head.x >= canvas.width ||
-        head.y < 0 ||
-        head.y >= canvas.height ||
+        head.x < 0 || head.x >= canvas.width ||
+        head.y < 0 || head.y >= canvas.height ||
         snake.some(seg => seg.x === head.x && seg.y === head.y)
       ) {
         alert("¡Perdiste en Snake! Reiniciando...");
@@ -185,18 +179,17 @@
         ctx.fillRect(i.x, i.y, box, box);
       }
       ctx.drawImage(appleImg, fruit.x, fruit.y, box, box);
-      if (stage === "snake") requestAnimationFrame(render);
+      requestAnimationFrame(render);
     }
 
     function gameLoop(now) {
       if (stage !== "snake") return;
       if (!lastMoveTime) lastMoveTime = now;
-      const delta = now - lastMoveTime;
-      if (delta > moveInterval) {
+      if (now - lastMoveTime > moveInterval) {
         moveSnake();
         lastMoveTime = now;
       }
-      if (stage === "snake") requestAnimationFrame(gameLoop);
+      requestAnimationFrame(gameLoop);
     }
 
     document.addEventListener("keydown", e => {
@@ -206,6 +199,7 @@
       if (e.key === "ArrowRight" && direction !== "LEFT") direction = "RIGHT";
       if (e.key === "ArrowDown" && direction !== "UP") direction = "DOWN";
     });
+
     document.querySelectorAll('.control-btn').forEach(btn => {
       btn.addEventListener('click', e => {
         if (stage !== "snake") return;
@@ -236,8 +230,8 @@
       requestAnimationFrame(gameLoop);
     }
 
-    // ==== BUSCAMINAS ====
-    const rows = 9, cols = 9, mines = 10;
+    // --- Buscaminas ---
+    const rows = 9, cols = 9, mines = 9;
     let board = [], revealed = [], flagged = [], mineLocations = [];
     let minesweeperGameOver = false, minesweeperGameWon = false;
 
@@ -320,6 +314,7 @@
       drawMinesweeper();
       checkWin();
     });
+
     document.getElementById("minesweeper").addEventListener("contextmenu", function(e) {
       e.preventDefault();
       if (minesweeperGameOver || minesweeperGameWon) return;
@@ -331,6 +326,7 @@
       drawMinesweeper();
       checkWin();
     });
+
     let touchTimeout;
     document.getElementById("minesweeper").addEventListener("touchstart", function(e) {
       const td = e.target;
@@ -343,6 +339,7 @@
         checkWin();
       }, 400);
     });
+
     document.getElementById("minesweeper").addEventListener("touchend", function(e) {
       clearTimeout(touchTimeout);
     });
