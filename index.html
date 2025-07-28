@@ -15,8 +15,9 @@
     canvas {
       background-color: black;
       display: none;
-      margin: 20px auto 0 auto; /* Centrado */
-      display: block; /* Asegura que respeta el margin auto */
+      margin: 20px auto 0 auto;
+      display: block;
+      border: 3px solid #fff;
     }
     #minesweeper {
       display: none;
@@ -40,24 +41,69 @@
       margin-top: 10px;
       font-size: 20px;
     }
+    /* Controles visuales Snake */
+    .controls {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 24px auto 0 auto;
+      width: max-content;
+    }
+    .control-row {
+      display: flex;
+      justify-content: center;
+    }
+    .control-btn {
+      margin: 7px;
+      font-size: 2.5em;
+      width: 68px;
+      height: 68px;
+      border-radius: 18px;
+      border: none;
+      background: #222;
+      color: #fff;
+      box-shadow: 0 2px 10px #0006;
+      cursor: pointer;
+      transition: background 0.15s;
+      user-select: none;
+    }
+    .control-btn:active {
+      background: #555;
+    }
+    @media (max-width: 700px) {
+      canvas { width: 98vw !important; height: 98vw !important; max-width: 98vw; max-height:98vw;}
+    }
   </style>
 </head>
 <body>
   <h1>Mini Juegos</h1>
   <p id="status">Cargando Snake...</p>
-  <canvas id="snakeCanvas" width="400" height="400"></canvas>
+  <canvas id="snakeCanvas" width="600" height="600"></canvas>
+  <div class="controls" id="snakeControls" style="display:none;">
+    <div class="control-row">
+      <button class="control-btn" data-dir="UP">▲</button>
+    </div>
+    <div class="control-row">
+      <button class="control-btn" data-dir="LEFT">◀</button>
+      <div style="width: 30px;"></div>
+      <button class="control-btn" data-dir="RIGHT">▶</button>
+    </div>
+    <div class="control-row">
+      <button class="control-btn" data-dir="DOWN">▼</button>
+    </div>
+  </div>
   <table id="minesweeper"></table>
-
   <script>
     // --------- Snake Game ----------
     const canvas = document.getElementById("snakeCanvas");
     const ctx = canvas.getContext("2d");
-    const box = 20;
+    const box = 30; // Tamaño cuadrado snake
+    const gridCount = 20;
     let snake = [{ x: 5 * box, y: 5 * box }];
-    let direction = "RIGHT"; // Por defecto se mueve a la derecha
+    let direction = "RIGHT";
     let fruit = {
-      x: Math.floor(Math.random() * 20) * box,
-      y: Math.floor(Math.random() * 20) * box
+      x: Math.floor(Math.random() * gridCount) * box,
+      y: Math.floor(Math.random() * gridCount) * box
     };
     let score = 0;
     const fruitTarget = 9;
@@ -97,18 +143,20 @@
         if (score >= fruitTarget) {
           clearInterval(interval);
           document.getElementById("status").innerText = "¡Ganaste Snake! Cargando Buscaminas...";
+          document.getElementById("snakeControls").style.display = "none";
           setTimeout(startMinesweeper, 1500);
           return;
         }
         fruit = {
-          x: Math.floor(Math.random() * 20) * box,
-          y: Math.floor(Math.random() * 20) * box
+          x: Math.floor(Math.random() * gridCount) * box,
+          y: Math.floor(Math.random() * gridCount) * box
         };
       } else {
         snake.pop();
       }
     }
 
+    // Controles por teclado
     document.addEventListener("keydown", e => {
       if (e.key === "ArrowLeft" && direction !== "RIGHT") direction = "LEFT";
       if (e.key === "ArrowUp" && direction !== "DOWN") direction = "UP";
@@ -116,21 +164,35 @@
       if (e.key === "ArrowDown" && direction !== "UP") direction = "DOWN";
     });
 
+    // Controles visuales/táctiles
+    document.querySelectorAll('.control-btn').forEach(btn => {
+      btn.addEventListener('click', e => {
+        const dir = e.target.dataset.dir;
+        if (dir === "LEFT" && direction !== "RIGHT") direction = "LEFT";
+        if (dir === "UP" && direction !== "DOWN") direction = "UP";
+        if (dir === "RIGHT" && direction !== "LEFT") direction = "RIGHT";
+        if (dir === "DOWN" && direction !== "UP") direction = "DOWN";
+      });
+    });
+
     function resetSnake() {
       snake = [{ x: 5 * box, y: 5 * box }];
-      direction = "RIGHT"; // Al reiniciar también va a la derecha
+      direction = "RIGHT";
       fruit = {
-        x: Math.floor(Math.random() * 20) * box,
-        y: Math.floor(Math.random() * 20) * box
+        x: Math.floor(Math.random() * gridCount) * box,
+        y: Math.floor(Math.random() * gridCount) * box
       };
       score = 0;
       document.getElementById("status").innerText = "Reintentando Snake...";
+      clearInterval(interval);
       interval = setInterval(drawSnake, 100);
     }
 
     function startSnake() {
       canvas.style.display = "block";
+      document.getElementById("snakeControls").style.display = "flex";
       document.getElementById("status").innerText = "Jugá Snake: juntá 9 frutas 🍎";
+      clearInterval(interval);
       interval = setInterval(drawSnake, 100);
     }
 
@@ -142,6 +204,7 @@
 
     function startMinesweeper() {
       canvas.style.display = "none";
+      document.getElementById("snakeControls").style.display = "none";
       table.style.display = "table";
       document.getElementById("status").innerText = "Buscaminas: evitá las 9 minas 💣";
       table.innerHTML = "";
