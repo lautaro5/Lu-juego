@@ -84,11 +84,16 @@
 
     // Imagen de la manzana
     const appleImg = new Image();
-    appleImg.src = "IMG_20250728_161829.png";
+    appleImg.src = "apple.png";
+    appleImg.onload = startSnake;
+    appleImg.onerror = () => {
+      document.getElementById("status").innerText =
+        "No se pudo cargar la imagen de la manzana. ¿Está el archivo apple.png en la carpeta?";
+    };
 
     // Control de tiempo para movimiento
     let lastMoveTime = 0;
-    const moveInterval = 180; // ms
+    const moveInterval = 140; // ms (ajusta para más velocidad)
 
     function randomFruitPosition() {
       let min = edgeMargin;
@@ -190,13 +195,10 @@
       canvas.style.display = "block";
       document.getElementById("snakeControls").style.display = "flex";
       document.getElementById("status").innerText = "Jugá Snake: juntá 9 frutas 🍎";
-      fruit = randomFruitPosition();
       resetSnake();
       requestAnimationFrame(render);
       requestAnimationFrame(gameLoop);
     }
-
-    appleImg.onload = startSnake;
   </script>
 </body>
 </html>
