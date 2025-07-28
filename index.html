@@ -2,56 +2,20 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Mini Juegos</title>
+  <title>Buscaminas</title>
   <style>
     body {
-      background-color: #111;
+      background-color: #121212;
       color: #fff;
       font-family: sans-serif;
       text-align: center;
-      margin: 0;
-      padding: 20px;
     }
-    canvas {
-      background-color: black;
-      display: none;
-      margin: 20px auto 0 auto;
-      display: block;
-      border: 3px solid #fff;
+    h1 {
+      margin-top: 20px;
     }
-    .controls {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      margin: 24px auto 0 auto;
-      width: max-content;
-    }
-    .control-row {
-      display: flex;
-      justify-content: center;
-    }
-    .control-btn {
-      margin: 7px;
-      font-size: 2.5em;
-      width: 68px;
-      height: 68px;
-      border-radius: 18px;
-      border: none;
-      background: #222;
-      color: #fff;
-      box-shadow: 0 2px 10px #0006;
-      cursor: pointer;
-      transition: background 0.15s;
-      user-select: none;
-    }
-    .control-btn:active {
-      background: #555;
-    }
-
     #minesweeper {
-      display: none;
-      margin: 20px auto;
       border-collapse: collapse;
+      margin: 20px auto;
     }
     #minesweeper td {
       width: 48px;
@@ -66,327 +30,142 @@
       user-select: none;
     }
     #minesweeper td.revealed {
-      background: #333;
+      background: #444;
       cursor: default;
     }
     #minesweeper td.mine {
-      background: #c00;
+      background: red;
     }
     #minesweeper td.flagged {
-      background: #557;
-      color: #ff0;
-    }
-
-    @media (max-width: 700px) {
-      canvas { width: 98vw !important; height: 98vw !important; max-width: 98vw; max-height:98vw;}
-      #minesweeper td { width: 10vw; height: 10vw; font-size: 6vw;}
+      background: #333;
+      color: orange;
     }
   </style>
 </head>
 <body>
-  <h1>Mini Juegos</h1>
-  <p id="status">Cargando Snake...</p>
-  <p style="color: #ccc; font-size: 0.9em;">Usá clic derecho o mantené presionado para marcar minas 🚩</p>
-
-  <canvas id="snakeCanvas" width="600" height="600"></canvas>
-  <div class="controls" id="snakeControls" style="display:none;">
-    <div class="control-row"><button class="control-btn" data-dir="UP">▲</button></div>
-    <div class="control-row">
-      <button class="control-btn" data-dir="LEFT">◀</button>
-      <div style="width: 30px;"></div>
-      <button class="control-btn" data-dir="RIGHT">▶</button>
-    </div>
-    <div class="control-row"><button class="control-btn" data-dir="DOWN">▼</button></div>
-  </div>
-
+  <h1>Buscaminas</h1>
   <table id="minesweeper"></table>
 
   <script>
-    // --- Snake ---
-    let stage = "snake";
-    const canvas = document.getElementById("snakeCanvas");
-    const ctx = canvas.getContext("2d");
-    const box = 30;
-    const gridCount = 20;
-    let snake = [{ x: 10 * box, y: 10 * box }];
-    let direction = "RIGHT";
-    let fruit = {};
-    let score = 0;
-    const fruitTarget = 9;
+    const rows = 9, cols = 9, mineCount = 9;
+    const table = document.getElementById("minesweeper");
+    const grid = [];
+    let gameOver = false;
 
-    const appleImg = new Image();
-    appleImg.src = "IMG_20250728_161829.png";
-    appleImg.onload = startSnake;
-    appleImg.onerror = () => {
-      document.getElementById("status").innerText =
-        "No se pudo cargar la imagen de la manzana.";
-    };
-
-    let lastMoveTime = 0;
-    const moveInterval = 140;
-
-    function randomFruitPosition() {
-      let pos, collision;
-      do {
-        pos = {
-          x: Math.floor(Math.random() * gridCount) * box,
-          y: Math.floor(Math.random() * gridCount) * box
-        };
-        collision = snake.some(seg => seg.x === pos.x && seg.y === pos.y);
-      } while (collision);
-      return pos;
-    }
-
-    function moveSnake() {
-      let head = { x: snake[0].x, y: snake[0].y };
-      if (direction === "LEFT") head.x -= box;
-      if (direction === "UP") head.y -= box;
-      if (direction === "RIGHT") head.x += box;
-      if (direction === "DOWN") head.y += box;
-
-      if (
-        head.x < 0 || head.x >= canvas.width ||
-        head.y < 0 || head.y >= canvas.height ||
-        snake.some(seg => seg.x === head.x && seg.y === head.y)
-      ) {
-        alert("¡Perdiste en Snake! Reiniciando...");
-        resetSnake();
-        return;
-      }
-
-      snake.unshift(head);
-
-      if (head.x === fruit.x && head.y === fruit.y) {
-        score++;
-        if (score >= fruitTarget) {
-          document.getElementById("status").innerText = "Ganaste Snake 🎉 ¡Ahora Buscaminas!";
-          setTimeout(() => {
-            startMinesweeper();
-          }, 1200);
-          return;
-        }
-        fruit = randomFruitPosition();
-      } else {
-        snake.pop();
-      }
-    }
-
-    function render() {
-      if (stage !== "snake") return;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      for (let i of snake) {
-        ctx.fillStyle = "lime";
-        ctx.fillRect(i.x, i.y, box, box);
-      }
-      ctx.drawImage(appleImg, fruit.x, fruit.y, box, box);
-      requestAnimationFrame(render);
-    }
-
-    function gameLoop(now) {
-      if (stage !== "snake") return;
-      if (!lastMoveTime) lastMoveTime = now;
-      if (now - lastMoveTime > moveInterval) {
-        moveSnake();
-        lastMoveTime = now;
-      }
-      requestAnimationFrame(gameLoop);
-    }
-
-    document.addEventListener("keydown", e => {
-      if (stage !== "snake") return;
-      if (e.key === "ArrowLeft" && direction !== "RIGHT") direction = "LEFT";
-      if (e.key === "ArrowUp" && direction !== "DOWN") direction = "UP";
-      if (e.key === "ArrowRight" && direction !== "LEFT") direction = "RIGHT";
-      if (e.key === "ArrowDown" && direction !== "UP") direction = "DOWN";
-    });
-
-    document.querySelectorAll('.control-btn').forEach(btn => {
-      btn.addEventListener('click', e => {
-        if (stage !== "snake") return;
-        const dir = e.target.dataset.dir;
-        if (dir === "LEFT" && direction !== "RIGHT") direction = "LEFT";
-        if (dir === "UP" && direction !== "DOWN") direction = "UP";
-        if (dir === "RIGHT" && direction !== "LEFT") direction = "RIGHT";
-        if (dir === "DOWN" && direction !== "UP") direction = "DOWN";
-      });
-    });
-
-    function resetSnake() {
-      snake = [{ x: 10 * box, y: 10 * box }];
-      direction = "RIGHT";
-      fruit = randomFruitPosition();
-      score = 0;
-      document.getElementById("status").innerText = "Reintentando Snake...";
-    }
-
-    function startSnake() {
-      stage = "snake";
-      canvas.style.display = "block";
-      document.getElementById("snakeControls").style.display = "flex";
-      document.getElementById("minesweeper").style.display = "none";
-      document.getElementById("status").innerText = "Jugá Snake: juntá 9 frutas 🍎";
-      resetSnake();
-      requestAnimationFrame(render);
-      requestAnimationFrame(gameLoop);
-    }
-
-    // --- Buscaminas ---
-    const rows = 9, cols = 9, mines = 9;
-    let board = [], revealed = [], flagged = [], mineLocations = [];
-    let minesweeperGameOver = false, minesweeperGameWon = false;
-
-    function startMinesweeper() {
-      stage = "minesweeper";
-      canvas.style.display = "none";
-      document.getElementById("snakeControls").style.display = "none";
-      document.getElementById("minesweeper").style.display = "table";
-      document.getElementById("status").innerText = "Buscaminas: encontrá todas las minas 🚩";
-      board = [], revealed = [], flagged = [], mineLocations = [];
-      minesweeperGameOver = false; minesweeperGameWon = false;
-      for (let i = 0; i < rows; i++) {
-        board[i] = [];
-        revealed[i] = [];
-        flagged[i] = [];
-        for (let j = 0; j < cols; j++) {
-          board[i][j] = 0;
-          revealed[i][j] = false;
-          flagged[i][j] = false;
-        }
-      }
-      let planted = 0;
-      while (planted < mines) {
-        let r = Math.floor(Math.random() * rows);
-        let c = Math.floor(Math.random() * cols);
-        if (board[r][c] === "M") continue;
-        board[r][c] = "M";
-        mineLocations.push([r, c]);
-        planted++;
-      }
-      for (let i = 0; i < rows; i++) {
-        for (let j = 0; j < cols; j++) {
-          if (board[i][j] === "M") continue;
-          let count = 0;
-          for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
-            let nr = i + dr, nc = j + dc;
-            if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && board[nr][nc] === "M") count++;
-          }
-          board[i][j] = count;
-        }
-      }
-      drawMinesweeper();
-    }
-
-    function drawMinesweeper() {
-      const table = document.getElementById("minesweeper");
-      table.innerHTML = "";
-      for (let i = 0; i < rows; i++) {
+    function createGrid() {
+      for (let r = 0; r < rows; r++) {
+        const row = [];
         const tr = document.createElement("tr");
-        for (let j = 0; j < cols; j++) {
-          const td = document.createElement("td");
-          td.dataset.r = i;
-          td.dataset.c = j;
-          if (revealed[i][j]) {
-            td.classList.add("revealed");
-            if (board[i][j] === "M") {
-              td.classList.add("mine");
-              td.textContent = "💣";
-            } else if (board[i][j] > 0) {
-              td.textContent = board[i][j];
-              td.style.color = ["#00f", "#080", "#f00", "#00a", "#a00", "#088", "#888", "#fff"][board[i][j] - 1];
-            }
-          } else if (flagged[i][j]) {
-            td.classList.add("flagged");
-            td.textContent = "🚩";
-          }
-          tr.appendChild(td);
+        for (let c = 0; c < cols; c++) {
+          const cell = {
+            element: document.createElement("td"),
+            hasMine: false,
+            revealed: false,
+            flagged: false,
+            neighborMines: 0,
+          };
+          cell.element.addEventListener("click", () => reveal(r, c));
+          cell.element.addEventListener("contextmenu", (e) => {
+            e.preventDefault();
+            toggleFlag(r, c);
+          });
+          tr.appendChild(cell.element);
+          row.push(cell);
         }
         table.appendChild(tr);
+        grid.push(row);
       }
+
+      placeMines();
+      calculateNumbers();
     }
 
-    document.getElementById("minesweeper").addEventListener("click", function(e) {
-      if (minesweeperGameOver || minesweeperGameWon) return;
-      const td = e.target;
-      if (td.tagName !== "TD") return;
-      const r = +td.dataset.r, c = +td.dataset.c;
-      if (flagged[r][c] || revealed[r][c]) return;
-      revealCell(r, c);
-      drawMinesweeper();
-      checkWin();
-    });
-
-    document.getElementById("minesweeper").addEventListener("contextmenu", function(e) {
-      e.preventDefault();
-      if (minesweeperGameOver || minesweeperGameWon) return;
-      const td = e.target;
-      if (td.tagName !== "TD") return;
-      const r = +td.dataset.r, c = +td.dataset.c;
-      if (revealed[r][c]) return;
-      flagged[r][c] = !flagged[r][c];
-      drawMinesweeper();
-      checkWin();
-    });
-
-    let touchTimeout;
-    document.getElementById("minesweeper").addEventListener("touchstart", function(e) {
-      const td = e.target;
-      if (td.tagName !== "TD") return;
-      const r = +td.dataset.r, c = +td.dataset.c;
-      if (revealed[r][c]) return;
-      touchTimeout = setTimeout(() => {
-        flagged[r][c] = !flagged[r][c];
-        drawMinesweeper();
-        checkWin();
-      }, 400);
-    });
-
-    document.getElementById("minesweeper").addEventListener("touchend", function(e) {
-      clearTimeout(touchTimeout);
-    });
-
-    function revealCell(r, c) {
-      if (flagged[r][c] || revealed[r][c]) return;
-      revealed[r][c] = true;
-      if (board[r][c] === "M") {
-        minesweeperGameOver = true;
-        revealAllMines();
-        document.getElementById("status").innerText = "¡Perdiste en Buscaminas! Tocá para reiniciar.";
-        document.getElementById("minesweeper").addEventListener("click", reiniciarMinesweeper, { once: true });
-        return;
-      }
-      if (board[r][c] === 0) {
-        for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
-          let nr = r + dr, nc = c + dc;
-          if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && !revealed[nr][nc]) {
-            revealCell(nr, nc);
-          }
+    function placeMines() {
+      let placed = 0;
+      while (placed < mineCount) {
+        const r = Math.floor(Math.random() * rows);
+        const c = Math.floor(Math.random() * cols);
+        if (!grid[r][c].hasMine) {
+          grid[r][c].hasMine = true;
+          placed++;
         }
       }
     }
 
-    function revealAllMines() {
-      for (let [r, c] of mineLocations) revealed[r][c] = true;
-      drawMinesweeper();
+    function calculateNumbers() {
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          if (grid[r][c].hasMine) continue;
+          let count = 0;
+          for (let dr = -1; dr <= 1; dr++) {
+            for (let dc = -1; dc <= 1; dc++) {
+              const nr = r + dr, nc = c + dc;
+              if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
+                if (grid[nr][nc].hasMine) count++;
+              }
+            }
+          }
+          grid[r][c].neighborMines = count;
+        }
+      }
+    }
+
+    function reveal(r, c) {
+      const cell = grid[r][c];
+      if (cell.revealed || cell.flagged || gameOver) return;
+
+      cell.revealed = true;
+      cell.element.classList.add("revealed");
+
+      if (cell.hasMine) {
+        cell.element.classList.add("mine");
+        cell.element.textContent = "💣";
+        gameOver = true;
+        alert("¡Perdiste! Reiniciando...");
+        location.reload();
+        return;
+      }
+
+      if (cell.neighborMines > 0) {
+        cell.element.textContent = cell.neighborMines;
+      } else {
+        for (let dr = -1; dr <= 1; dr++) {
+          for (let dc = -1; dc <= 1; dc++) {
+            const nr = r + dr, nc = c + dc;
+            if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
+              reveal(nr, nc);
+            }
+          }
+        }
+      }
+
+      checkWin();
+    }
+
+    function toggleFlag(r, c) {
+      const cell = grid[r][c];
+      if (cell.revealed || gameOver) return;
+
+      cell.flagged = !cell.flagged;
+      cell.element.classList.toggle("flagged");
+      cell.element.textContent = cell.flagged ? "⚑" : "";
     }
 
     function checkWin() {
-      if (minesweeperGameOver) return;
-      let unrevealed = 0;
-      for (let i = 0; i < rows; i++)
-        for (let j = 0; j < cols; j++)
-          if (!revealed[i][j] && board[i][j] !== "M") unrevealed++;
-      if (unrevealed === 0) {
-        minesweeperGameWon = true;
-        document.getElementById("status").innerText = "¡Ganaste Buscaminas! 🎉";
-        setTimeout(() => {
-          document.getElementById("status").innerText = "¡Completaste los minijuegos!";
-        }, 1200);
+      let revealedCount = 0;
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          if (grid[r][c].revealed) revealedCount++;
+        }
+      }
+      if (revealedCount === rows * cols - mineCount) {
+        gameOver = true;
+        alert("¡Ganaste! Pasás al siguiente juego.");
+        // acá podrías redirigir a otro juego o reiniciar
       }
     }
 
-    function reiniciarMinesweeper() {
-      startMinesweeper();
-    }
+    createGrid();
   </script>
 </body>
 </html>
