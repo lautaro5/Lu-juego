@@ -1,217 +1,136 @@
-<!DOCTYPE html>
-<html>
+<!DOCTYPE html><html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Buscaminas</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Buscaminas Clásico</title>
   <style>
-    table {
-      border-collapse: collapse;
-      margin: auto;
-      margin-top: 30px;
+    body {
+      font-family: sans-serif;
+      background: #111;
+      color: white;
+      text-align: center;
     }
-    #minesweeper td {
-      width: 48px;
-      height: 48px;
-      background: #222;
-      border: 1px solid #444;
-      color: #fff;
-      font-size: 1.6em;
-      cursor: pointer;
+    table {
+      margin: 20px auto;
+      border-spacing: 0;
+    }
+    td {
+      width: 40px;
+      height: 40px;
+      border: 1px solid #555;
+      background: #444;
+      color: white;
+      font-weight: bold;
+      font-size: 20px;
       text-align: center;
       vertical-align: middle;
       user-select: none;
     }
-    #minesweeper td.revealed {
-      background: #666;
-      cursor: default;
-    }
-    #minesweeper td.marked {
-      background: #a00;
-    }
-    h2 {
-      text-align: center;
-      font-family: sans-serif;
+    td.revealed {
+      background: #222;
     }
   </style>
 </head>
 <body>
-
-<h2>Buscaminas - Encuentra las 9 minas</h2>
-<table id="minesweeper"></table>
-
-<script>
-  const rows = 9;
-  const cols = 9;
-  const totalMines = 9;
-  let minefield = [];
-
-  const table = document.getElementById('minesweeper');
-
-  function generateMinefield() {
-    minefield = Array.from({ length: rows }, () => Array(cols).fill({ mine: false, count: 0, revealed: false, marked: false }));
-    let placedMines = 0;
-    while (placedMines < totalMines) {
-      let r = Math.floor(Math.random() * rows);
-      let c = Math.floor(Math.random() * cols);
-      if (!minefield[r][c].mine) {
-        minefield[r][c] = { ...minefield[r][c], mine: true };
-        placedMines++;
-      }
+  <h1>Buscaminas</h1>
+  <table id="board"></table>
+  <script>
+    const rows = 9;
+    const cols = 9;
+    const mines = 9;
+    let board = document.getElementById("board");
+    let grid = [];
+    let revealed = [];
+    let firstClick = true;function initBoard() {
+  board.innerHTML = "";
+  grid = Array(rows).fill().map(() => Array(cols).fill(0));
+  revealed = Array(rows).fill().map(() => Array(cols).fill(false));
+  for (let i = 0; i < rows; i++) {
+    let tr = document.createElement("tr");
+    for (let j = 0; j < cols; j++) {
+      let td = document.createElement("td");
+      td.dataset.i = i;
+      td.dataset.j = j;
+      td.addEventListener("click", cellClick);
+      td.addEventListener("contextmenu", markCell);
+      tr.appendChild(td);
     }
+    board.appendChild(tr);
+  }
+}
 
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        if (!minefield[r][c].mine) {
-          let count = 0;
-          for (let i = -1; i <= 1; i++) {
-            for (let j = -1; j <= 1; j++) {
-              if (
-                r + i >= 0 && r + i < rows &&
-                c + j >= 0 && c + j < cols &&
-                minefield[r + i][c + j].mine
-              ) {
-                count++;
-              }
-            }
-          }
-          minefield[r][c].count = count;
-        }
-      }
+function placeMines(excludeI, excludeJ) {
+  let placed = 0;
+  while (placed < mines) {
+    let i = Math.floor(Math.random() * rows);
+    let j = Math.floor(Math.random() * cols);
+    if ((i !== excludeI || j !== excludeJ) && grid[i][j] !== "M") {
+      grid[i][j] = "M";
+      placed++;
     }
   }
-
-  function drawBoard() {
-    table.innerHTML = '';
-    for (let r = 0; r < rows; r++) {
-      let tr = document.createElement('tr');
-      for (let c = 0; c < cols; c++) {
-        let td = document.createElement('td');
-        td.dataset.row = r;
-        td.dataset.col = c;
-        td.addEventListener('click', () => reveal(r, c));
-        td.addEventListener('contextmenu', e => {
-          e.preventDefault();
-          mark(r, c);
-        });
-
-        // Doble toque en celulares
-        let lastTap = 0;
-        td.addEventListener('touchend', (e) => {
-          const currentTime = new Date().getTime();
-          const tapLength = currentTime - lastTap;
-          if (tapLength < 300 && tapLength > 0) {
-            revealAround(r, c);
-            e.preventDefault();
-          }
-          lastTap = currentTime;
-        });
-
-        tr.appendChild(td);
-      }
-      table.appendChild(tr);
-    }
-    updateBoard();
-  }
-
-  function updateBoard() {
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        let td = table.rows[r].cells[c];
-        let cell = minefield[r][c];
-        td.className = '';
-        if (cell.revealed) {
-          td.classList.add('revealed');
-          td.textContent = cell.mine ? '💣' : (cell.count || '');
-        } else if (cell.marked) {
-          td.classList.add('marked');
-          td.textContent = '🚩';
-        } else {
-          td.textContent = '';
-        }
-      }
-    }
-  }
-
-  function reveal(r, c) {
-    if (r < 0 || c < 0 || r >= rows || c >= cols) return;
-    let cell = minefield[r][c];
-    if (cell.revealed || cell.marked) return;
-
-    cell.revealed = true;
-
-    if (cell.mine) {
-      alert('¡Perdiste! Había una mina.');
-      generateMinefield();
-      drawBoard();
-      return;
-    }
-
-    if (cell.count === 0) {
-      for (let i = -1; i <= 1; i++) {
-        for (let j = -1; j <= 1; j++) {
-          if (i !== 0 || j !== 0) reveal(r + i, c + j);
-        }
-      }
-    }
-
-    updateBoard();
-    checkWin();
-  }
-
-  function mark(r, c) {
-    let cell = minefield[r][c];
-    if (!cell.revealed) {
-      cell.marked = !cell.marked;
-      updateBoard();
-    }
-  }
-
-  function revealAround(r, c) {
-    let cell = minefield[r][c];
-    if (!cell.revealed || cell.count === 0) return;
-
-    let flagCount = 0;
-    for (let i = -1; i <= 1; i++) {
-      for (let j = -1; j <= 1; j++) {
-        let rr = r + i, cc = c + j;
-        if (rr >= 0 && rr < rows && cc >= 0 && cc < cols) {
-          if (minefield[rr][cc].marked) flagCount++;
-        }
-      }
-    }
-
-    if (flagCount === cell.count) {
-      for (let i = -1; i <= 1; i++) {
-        for (let j = -1; j <= 1; j++) {
-          let rr = r + i, cc = c + j;
-          if (
-            rr >= 0 && rr < rows && cc >= 0 && cc < cols &&
-            !minefield[rr][cc].revealed && !minefield[rr][cc].marked
-          ) {
-            reveal(rr, cc);
+  for (let i = 0; i < rows; i++) {
+    for (let j = 0; j < cols; j++) {
+      if (grid[i][j] === "M") continue;
+      let count = 0;
+      for (let di = -1; di <= 1; di++) {
+        for (let dj = -1; dj <= 1; dj++) {
+          let ni = i + di;
+          let nj = j + dj;
+          if (ni >= 0 && ni < rows && nj >= 0 && nj < cols && grid[ni][nj] === "M") {
+            count++;
           }
         }
       }
+      grid[i][j] = count;
     }
   }
+}
 
-  function checkWin() {
-    let revealedCount = 0;
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols; c++) {
-        if (minefield[r][c].revealed) revealedCount++;
+function reveal(i, j) {
+  if (i < 0 || i >= rows || j < 0 || j >= cols || revealed[i][j]) return;
+  let cell = board.children[i].children[j];
+  revealed[i][j] = true;
+  cell.classList.add("revealed");
+  if (grid[i][j] === "M") {
+    cell.textContent = "💣";
+    alert("Perdiste");
+    initBoard();
+    firstClick = true;
+    return;
+  }
+  if (grid[i][j] > 0) {
+    cell.textContent = grid[i][j];
+  } else {
+    for (let di = -1; di <= 1; di++) {
+      for (let dj = -1; dj <= 1; dj++) {
+        reveal(i + di, j + dj);
       }
     }
-    if (revealedCount === rows * cols - totalMines) {
-      alert('¡Ganaste! Todas las minas fueron evitadas.');
-      generateMinefield();
-      drawBoard();
-    }
   }
+}
 
-  generateMinefield();
-  drawBoard();
-</script>
+function cellClick(e) {
+  let i = parseInt(this.dataset.i);
+  let j = parseInt(this.dataset.j);
+  if (firstClick) {
+    placeMines(i, j);
+    firstClick = false;
+  }
+  reveal(i, j);
+}
 
+function markCell(e) {
+  e.preventDefault();
+  let i = parseInt(this.dataset.i);
+  let j = parseInt(this.dataset.j);
+  let cell = board.children[i].children[j];
+  if (revealed[i][j]) return;
+  cell.textContent = cell.textContent === "🚩" ? "" : "🚩";
+}
+
+initBoard();
+
+  </script>
 </body>
 </html>
