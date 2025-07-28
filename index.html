@@ -1,171 +1,197 @@
 <!DOCTYPE html>
-<html>
+<html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <title>Buscaminas Touch</title>
+  <meta charset="UTF-8" />
+  <title>Buscaminas</title>
   <style>
+    body {
+      font-family: sans-serif;
+      background: #111;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+    }
+
     table {
       border-collapse: collapse;
-      margin: 20px auto;
+      user-select: none;
+      touch-action: manipulation;
     }
-    #minesweeper td {
+
+    td {
       width: 48px;
       height: 48px;
       background: #222;
       border: 1px solid #444;
-      color: #fff;
+      color: white;
       font-size: 1.6em;
-      cursor: pointer;
       text-align: center;
       vertical-align: middle;
-      user-select: none;
     }
-    .revealed {
-      background: #888;
-      cursor: default;
-    }
-    .mine {
-      background: red;
-    }
-    .flagged {
+
+    td.revealed {
       background: #444;
-      color: yellow;
+    }
+
+    td.flagged {
+      background: #1a1a1a;
+      color: red;
+    }
+
+    td.mine {
+      background: red;
     }
   </style>
 </head>
 <body>
-  <h2 style="text-align:center;">Buscaminas (Mantener para marcar mina)</h2>
+  <h2>Buscaminas</h2>
   <table id="minesweeper"></table>
-
   <script>
-    const rows = 9, cols = 9, minesCount = 9;
-    let board = [], minePositions = [];
+    const rows = 9, cols = 9, mineCount = 9;
+    const board = [];
+    let gameOver = false;
 
     function createBoard() {
       const table = document.getElementById('minesweeper');
       table.innerHTML = '';
-      board = [];
-      minePositions = [];
+      gameOver = false;
 
-      // Crear tabla y celdas
-      for (let i = 0; i < rows; i++) {
+      // Inicializar tablero
+      for (let r = 0; r < rows; r++) {
         const row = [];
         const tr = document.createElement('tr');
-        for (let j = 0; j < cols; j++) {
-          const td = document.createElement('td');
-          td.dataset.row = i;
-          td.dataset.col = j;
-          tr.appendChild(td);
-          row.push({ mine: false, revealed: false, flagged: false });
+        for (let c = 0; c < cols; c++) {
+          const cell = {
+            mine: false,
+            revealed: false,
+            flagged: false,
+            row: r,
+            col: c,
+            element: document.createElement('td'),
+          };
+          row.push(cell);
+          tr.appendChild(cell.element);
         }
-        table.appendChild(tr);
         board.push(row);
+        table.appendChild(tr);
       }
 
       // Colocar minas
       let placed = 0;
-      while (placed < minesCount) {
+      while (placed < mineCount) {
         const r = Math.floor(Math.random() * rows);
         const c = Math.floor(Math.random() * cols);
         if (!board[r][c].mine) {
           board[r][c].mine = true;
-          minePositions.push([r, c]);
           placed++;
         }
       }
 
-      // Listeners
-      document.querySelectorAll('#minesweeper td').forEach(cell => {
-        let pressTimer;
-        cell.addEventListener('mousedown', e => {
-          pressTimer = setTimeout(() => toggleFlag(cell), 500);
-        });
-        cell.addEventListener('touchstart', e => {
-          pressTimer = setTimeout(() => toggleFlag(cell), 500);
-        });
-        cell.addEventListener('mouseup', e => {
-          clearTimeout(pressTimer);
-          if (e.button === 0) revealCell(cell);
-        });
-        cell.addEventListener('touchend', e => {
-          clearTimeout(pressTimer);
-          if (!cell.classList.contains('flagged')) revealCell(cell);
-        });
-        cell.addEventListener('contextmenu', e => {
-          e.preventDefault();
-          toggleFlag(cell);
+      // Agregar listeners
+      board.forEach(row => {
+        row.forEach(cell => {
+          cell.element.addEventListener('click', () => handleClick(cell));
+          cell.element.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            toggleFlag(cell);
+          });
+
+          let pressTimer;
+          cell.element.addEventListener("touchstart", (e) => {
+            pressTimer = setTimeout(() => toggleFlag(cell), 500);
+          });
+
+          cell.element.addEventListener("touchend", (e) => {
+            clearTimeout(pressTimer);
+          });
+
+          cell.element.addEventListener("dblclick", () => doubleClick(cell));
         });
       });
     }
 
-    function toggleFlag(cell) {
-      const r = +cell.dataset.row;
-      const c = +cell.dataset.col;
-      if (board[r][c].revealed) return;
-      board[r][c].flagged = !board[r][c].flagged;
-      cell.textContent = board[r][c].flagged ? '🚩' : '';
-      cell.classList.toggle('flagged');
-    }
-
-    function revealCell(cell) {
-      const r = +cell.dataset.row;
-      const c = +cell.dataset.col;
-      const data = board[r][c];
-      if (data.revealed || data.flagged) return;
-
-      data.revealed = true;
-      cell.classList.add('revealed');
-
-      if (data.mine) {
-        cell.textContent = '💣';
-        cell.classList.add('mine');
-        alert('¡Perdiste!');
-        createBoard();
+    function handleClick(cell) {
+      if (gameOver || cell.revealed || cell.flagged) return;
+      if (cell.mine) {
+        cell.element.classList.add('mine');
+        cell.element.innerText = "💣";
+        revealAllMines();
+        alert("¡Perdiste!");
+        gameOver = true;
         return;
       }
 
-      const count = countMines(r, c);
-      if (count > 0) {
-        cell.textContent = count;
-      } else {
-        // Revelar vecinos si no hay minas alrededor
-        for (let dr = -1; dr <= 1; dr++) {
-          for (let dc = -1; dc <= 1; dc++) {
-            const nr = r + dr;
-            const nc = c + dc;
-            if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
-              revealCell(document.querySelector(`[data-row="${nr}"][data-col="${nc}"]`));
-            }
-          }
-        }
-      }
-
+      revealCell(cell);
       checkWin();
     }
 
+    function toggleFlag(cell) {
+      if (cell.revealed || gameOver) return;
+      cell.flagged = !cell.flagged;
+      cell.element.classList.toggle('flagged');
+      cell.element.innerText = cell.flagged ? "🚩" : "";
+    }
+
+    function revealCell(cell) {
+      if (cell.revealed || cell.flagged) return;
+      cell.revealed = true;
+      cell.element.classList.add('revealed');
+      const minesAround = countMines(cell.row, cell.col);
+      if (minesAround > 0) {
+        cell.element.innerText = minesAround;
+      } else {
+        getNeighbors(cell.row, cell.col).forEach(n => revealCell(n));
+      }
+    }
+
     function countMines(r, c) {
-      let count = 0;
+      return getNeighbors(r, c).filter(n => n.mine).length;
+    }
+
+    function getNeighbors(r, c) {
+      const neighbors = [];
       for (let dr = -1; dr <= 1; dr++) {
         for (let dc = -1; dc <= 1; dc++) {
-          const nr = r + dr;
-          const nc = c + dc;
-          if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && board[nr][nc].mine) {
-            count++;
+          if (dr === 0 && dc === 0) continue;
+          const nr = r + dr, nc = c + dc;
+          if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
+            neighbors.push(board[nr][nc]);
           }
         }
       }
-      return count;
+      return neighbors;
+    }
+
+    function revealAllMines() {
+      board.flat().forEach(cell => {
+        if (cell.mine) {
+          cell.element.innerText = "💣";
+          cell.element.classList.add('mine');
+        }
+      });
     }
 
     function checkWin() {
-      let revealedCount = 0;
-      for (let i = 0; i < rows; i++)
-        for (let j = 0; j < cols; j++)
-          if (board[i][j].revealed) revealedCount++;
+      const unrevealed = board.flat().filter(c => !c.revealed);
+      if (unrevealed.length === mineCount) {
+        alert("¡Ganaste!");
+        gameOver = true;
+      }
+    }
 
-      if (revealedCount === rows * cols - minesCount) {
-        alert('¡Ganaste!');
-        createBoard();
+    function doubleClick(cell) {
+      if (!cell.revealed || gameOver) return;
+      const neighbors = getNeighbors(cell.row, cell.col);
+      const flagged = neighbors.filter(n => n.flagged).length;
+      const minesAround = countMines(cell.row, cell.col);
+      if (flagged === minesAround) {
+        neighbors.forEach(n => {
+          if (!n.revealed && !n.flagged) handleClick(n);
+        });
       }
     }
 
