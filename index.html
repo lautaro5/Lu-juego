@@ -103,7 +103,7 @@
   <table id="minesweeper"></table>
   <script>
     // ==== SNAKE ====
-    let stage = "snake"; // Controla el juego activo
+    let stage = "snake";
     const canvas = document.getElementById("snakeCanvas");
     const ctx = canvas.getContext("2d");
     const box = 30;
@@ -113,11 +113,11 @@
     let direction = "RIGHT";
     let fruit = {};
     let score = 0;
-    const fruitTarget = 2;
+    const fruitTarget = 9;
 
-    // Imagen de la manzana
+    // Imagen: Cambia aquí si tu archivo tiene otro nombre
     const appleImg = new Image();
-    appleImg.src = "apple.png";
+    appleImg.src = "apple.png"; // Cambia "apple.png" por el nombre exacto de tu imagen si es necesario
     appleImg.onload = startSnake;
     appleImg.onerror = () => {
       document.getElementById("status").innerText =
@@ -165,7 +165,6 @@
       if (head.x === fruit.x && head.y === fruit.y) {
         score++;
         if (score >= fruitTarget) {
-          // GANASTE SNAKE: PASA AUTO A BUSCAMINAS
           document.getElementById("status").innerText = "Ganaste Snake 🎉 ¡Ahora Buscaminas!";
           setTimeout(() => {
             startMinesweeper();
@@ -238,7 +237,6 @@
     }
 
     // ==== BUSCAMINAS ====
-    // Parámetros del tablero
     const rows = 9, cols = 9, mines = 10;
     let board = [], revealed = [], flagged = [], mineLocations = [];
     let minesweeperGameOver = false, minesweeperGameWon = false;
@@ -249,11 +247,8 @@
       document.getElementById("snakeControls").style.display = "none";
       document.getElementById("minesweeper").style.display = "table";
       document.getElementById("status").innerText = "Buscaminas: encontrá todas las minas 🚩";
-
       board = [], revealed = [], flagged = [], mineLocations = [];
       minesweeperGameOver = false; minesweeperGameWon = false;
-
-      // Inicializa el tablero
       for (let i = 0; i < rows; i++) {
         board[i] = [];
         revealed[i] = [];
@@ -264,7 +259,6 @@
           flagged[i][j] = false;
         }
       }
-      // Planta minas
       let planted = 0;
       while (planted < mines) {
         let r = Math.floor(Math.random() * rows);
@@ -274,7 +268,6 @@
         mineLocations.push([r, c]);
         planted++;
       }
-      // Números
       for (let i = 0; i < rows; i++) {
         for (let j = 0; j < cols; j++) {
           if (board[i][j] === "M") continue;
@@ -317,7 +310,6 @@
       }
     }
 
-    // Click izquierdo: revelar. Click derecho o largo: marcar/desmarcar bandera
     document.getElementById("minesweeper").addEventListener("click", function(e) {
       if (minesweeperGameOver || minesweeperGameWon) return;
       const td = e.target;
@@ -339,7 +331,6 @@
       drawMinesweeper();
       checkWin();
     });
-    // Soporte para bandera en móvil (mantener presionado)
     let touchTimeout;
     document.getElementById("minesweeper").addEventListener("touchstart", function(e) {
       const td = e.target;
@@ -392,7 +383,6 @@
         document.getElementById("status").innerText = "¡Ganaste Buscaminas! 🎉";
         setTimeout(() => {
           document.getElementById("status").innerText = "¡Completaste los minijuegos!";
-          // Aquí podrías reiniciar o mostrar otro juego si quieres
         }, 1200);
       }
     }
