@@ -1,127 +1,202 @@
-<script>
-const canvas = document.getElementById("snakeCanvas");
-const ctx = canvas.getContext("2d");
-const box = 30;
-const gridCount = 20;
-const edgeMargin = 1;
-let snake = [{ x: 10 * box, y: 10 * box }];
-let direction = "RIGHT";
-let fruit = {};
-let score = 0;
-const fruitTarget = 9;
-
-// --- Imagen de manzana
-const appleImg = new Image();
-appleImg.src = "apple.png";
-
-// --- Control de tiempo para movimiento
-let lastMoveTime = 0;
-const moveInterval = 180; // ms, puedes bajarlo a 140 si quieres un poco más rápido
-
-function randomFruitPosition() {
-  let min = edgeMargin;
-  let max = gridCount - 1 - edgeMargin;
-  let pos, collision;
-  do {
-    pos = {
-      x: Math.floor(Math.random() * (max - min + 1) + min) * box,
-      y: Math.floor(Math.random() * (max - min + 1) + min) * box
-    };
-    collision = snake.some(seg => seg.x === pos.x && seg.y === pos.y);
-  } while (collision);
-  return pos;
-}
-
-function moveSnake() {
-  let head = { x: snake[0].x, y: snake[0].y };
-  if (direction === "LEFT") head.x -= box;
-  if (direction === "UP") head.y -= box;
-  if (direction === "RIGHT") head.x += box;
-  if (direction === "DOWN") head.y += box;
-
-  // Hitbox precisa
-  if (
-    head.x < 0 ||
-    head.x >= canvas.width ||
-    head.y < 0 ||
-    head.y >= canvas.height ||
-    snake.some(seg => seg.x === head.x && seg.y === head.y)
-  ) {
-    alert("¡Perdiste en Snake! Reiniciando...");
-    resetSnake();
-    return;
-  }
-
-  snake.unshift(head);
-
-  if (head.x === fruit.x && head.y === fruit.y) {
-    score++;
-    if (score >= fruitTarget) {
-      document.getElementById("status").innerText = "¡Ganaste Snake!";
-      document.getElementById("snakeControls").style.display = "none";
-      return;
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Mini Juegos</title>
+  <style>
+    body {
+      background-color: #111;
+      color: #fff;
+      font-family: sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 20px;
     }
-    fruit = randomFruitPosition();
-  } else {
-    snake.pop();
-  }
-}
+    canvas {
+      background-color: black;
+      display: none;
+      margin: 20px auto 0 auto;
+      display: block;
+      border: 3px solid #fff;
+    }
+    .controls {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 24px auto 0 auto;
+      width: max-content;
+    }
+    .control-row {
+      display: flex;
+      justify-content: center;
+    }
+    .control-btn {
+      margin: 7px;
+      font-size: 2.5em;
+      width: 68px;
+      height: 68px;
+      border-radius: 18px;
+      border: none;
+      background: #222;
+      color: #fff;
+      box-shadow: 0 2px 10px #0006;
+      cursor: pointer;
+      transition: background 0.15s;
+      user-select: none;
+    }
+    .control-btn:active {
+      background: #555;
+    }
+    @media (max-width: 700px) {
+      canvas { width: 98vw !important; height: 98vw !important; max-width: 98vw; max-height:98vw;}
+    }
+  </style>
+</head>
+<body>
+  <h1>Mini Juegos</h1>
+  <p id="status">Cargando Snake...</p>
+  <canvas id="snakeCanvas" width="600" height="600"></canvas>
+  <div class="controls" id="snakeControls" style="display:none;">
+    <div class="control-row">
+      <button class="control-btn" data-dir="UP">▲</button>
+    </div>
+    <div class="control-row">
+      <button class="control-btn" data-dir="LEFT">◀</button>
+      <div style="width: 30px;"></div>
+      <button class="control-btn" data-dir="RIGHT">▶</button>
+    </div>
+    <div class="control-row">
+      <button class="control-btn" data-dir="DOWN">▼</button>
+    </div>
+  </div>
+  <script>
+    // Configuración
+    const canvas = document.getElementById("snakeCanvas");
+    const ctx = canvas.getContext("2d");
+    const box = 30;
+    const gridCount = 20;
+    const edgeMargin = 1; // margen de casillas para evitar los bordes
+    let snake = [{ x: 10 * box, y: 10 * box }];
+    let direction = "RIGHT";
+    let fruit = {};
+    let score = 0;
+    const fruitTarget = 9;
 
-// --- Render fluido con requestAnimationFrame
-function render() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  for (let i of snake) {
-    ctx.fillStyle = "lime";
-    ctx.fillRect(i.x, i.y, box, box);
-  }
-  ctx.drawImage(appleImg, fruit.x, fruit.y, box, box);
-  requestAnimationFrame(render);
-}
+    // Imagen de la manzana
+    const appleImg = new Image();
+    appleImg.src = "apple.png";
 
-// --- Loop principal
-function gameLoop(now) {
-  if (!lastMoveTime) lastMoveTime = now;
-  const delta = now - lastMoveTime;
-  if (delta > moveInterval) {
-    moveSnake();
-    lastMoveTime = now;
-  }
-  requestAnimationFrame(gameLoop);
-}
+    // Control de tiempo para movimiento
+    let lastMoveTime = 0;
+    const moveInterval = 180; // ms
 
-document.addEventListener("keydown", e => {
-  if (e.key === "ArrowLeft" && direction !== "RIGHT") direction = "LEFT";
-  if (e.key === "ArrowUp" && direction !== "DOWN") direction = "UP";
-  if (e.key === "ArrowRight" && direction !== "LEFT") direction = "RIGHT";
-  if (e.key === "ArrowDown" && direction !== "UP") direction = "DOWN";
-});
-document.querySelectorAll('.control-btn').forEach(btn => {
-  btn.addEventListener('click', e => {
-    const dir = e.target.dataset.dir;
-    if (dir === "LEFT" && direction !== "RIGHT") direction = "LEFT";
-    if (dir === "UP" && direction !== "DOWN") direction = "UP";
-    if (dir === "RIGHT" && direction !== "LEFT") direction = "RIGHT";
-    if (dir === "DOWN" && direction !== "UP") direction = "DOWN";
-  });
-});
+    function randomFruitPosition() {
+      let min = edgeMargin;
+      let max = gridCount - 1 - edgeMargin;
+      let pos, collision;
+      do {
+        pos = {
+          x: Math.floor(Math.random() * (max - min + 1) + min) * box,
+          y: Math.floor(Math.random() * (max - min + 1) + min) * box
+        };
+        collision = snake.some(seg => seg.x === pos.x && seg.y === pos.y);
+      } while (collision);
+      return pos;
+    }
 
-function resetSnake() {
-  snake = [{ x: 10 * box, y: 10 * box }];
-  direction = "RIGHT";
-  fruit = randomFruitPosition();
-  score = 0;
-  document.getElementById("status").innerText = "Reintentando Snake...";
-}
+    function moveSnake() {
+      let head = { x: snake[0].x, y: snake[0].y };
+      if (direction === "LEFT") head.x -= box;
+      if (direction === "UP") head.y -= box;
+      if (direction === "RIGHT") head.x += box;
+      if (direction === "DOWN") head.y += box;
 
-function startSnake() {
-  canvas.style.display = "block";
-  document.getElementById("snakeControls").style.display = "flex";
-  document.getElementById("status").innerText = "Jugá Snake: juntá 9 frutas 🍎";
-  fruit = randomFruitPosition();
-  resetSnake();
-  requestAnimationFrame(render);
-  requestAnimationFrame(gameLoop);
-}
+      // Hitbox precisa
+      if (
+        head.x < 0 ||
+        head.x >= canvas.width ||
+        head.y < 0 ||
+        head.y >= canvas.height ||
+        snake.some(seg => seg.x === head.x && seg.y === head.y)
+      ) {
+        alert("¡Perdiste en Snake! Reiniciando...");
+        resetSnake();
+        return;
+      }
 
-appleImg.onload = startSnake;
-</script>
+      snake.unshift(head);
+
+      if (head.x === fruit.x && head.y === fruit.y) {
+        score++;
+        if (score >= fruitTarget) {
+          document.getElementById("status").innerText = "¡Ganaste Snake!";
+          document.getElementById("snakeControls").style.display = "none";
+          return;
+        }
+        fruit = randomFruitPosition();
+      } else {
+        snake.pop();
+      }
+    }
+
+    // Render fluido con requestAnimationFrame
+    function render() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (let i of snake) {
+        ctx.fillStyle = "lime";
+        ctx.fillRect(i.x, i.y, box, box);
+      }
+      ctx.drawImage(appleImg, fruit.x, fruit.y, box, box);
+      requestAnimationFrame(render);
+    }
+
+    // Loop principal
+    function gameLoop(now) {
+      if (!lastMoveTime) lastMoveTime = now;
+      const delta = now - lastMoveTime;
+      if (delta > moveInterval) {
+        moveSnake();
+        lastMoveTime = now;
+      }
+      requestAnimationFrame(gameLoop);
+    }
+
+    // Controles
+    document.addEventListener("keydown", e => {
+      if (e.key === "ArrowLeft" && direction !== "RIGHT") direction = "LEFT";
+      if (e.key === "ArrowUp" && direction !== "DOWN") direction = "UP";
+      if (e.key === "ArrowRight" && direction !== "LEFT") direction = "RIGHT";
+      if (e.key === "ArrowDown" && direction !== "UP") direction = "DOWN";
+    });
+    document.querySelectorAll('.control-btn').forEach(btn => {
+      btn.addEventListener('click', e => {
+        const dir = e.target.dataset.dir;
+        if (dir === "LEFT" && direction !== "RIGHT") direction = "LEFT";
+        if (dir === "UP" && direction !== "DOWN") direction = "UP";
+        if (dir === "RIGHT" && direction !== "LEFT") direction = "RIGHT";
+        if (dir === "DOWN" && direction !== "UP") direction = "DOWN";
+      });
+    });
+
+    function resetSnake() {
+      snake = [{ x: 10 * box, y: 10 * box }];
+      direction = "RIGHT";
+      fruit = randomFruitPosition();
+      score = 0;
+      document.getElementById("status").innerText = "Reintentando Snake...";
+    }
+
+    function startSnake() {
+      canvas.style.display = "block";
+      document.getElementById("snakeControls").style.display = "flex";
+      document.getElementById("status").innerText = "Jugá Snake: juntá 9 frutas 🍎";
+      fruit = randomFruitPosition();
+      resetSnake();
+      requestAnimationFrame(render);
+      requestAnimationFrame(gameLoop);
+    }
+
+    appleImg.onload = startSnake;
+  </script>
+</body>
+</html>
