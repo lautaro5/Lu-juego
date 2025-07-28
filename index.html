@@ -15,7 +15,8 @@
     canvas {
       background-color: black;
       display: none;
-      margin-top: 20px;
+      margin: 20px auto 0 auto; /* Centrado */
+      display: block; /* Asegura que respeta el margin auto */
     }
     #minesweeper {
       display: none;
@@ -53,7 +54,7 @@
     const ctx = canvas.getContext("2d");
     const box = 20;
     let snake = [{ x: 5 * box, y: 5 * box }];
-    let direction = null;
+    let direction = "RIGHT"; // Por defecto se mueve a la derecha
     let fruit = {
       x: Math.floor(Math.random() * 20) * box,
       y: Math.floor(Math.random() * 20) * box
@@ -117,7 +118,7 @@
 
     function resetSnake() {
       snake = [{ x: 5 * box, y: 5 * box }];
-      direction = null;
+      direction = "RIGHT"; // Al reiniciar también va a la derecha
       fruit = {
         x: Math.floor(Math.random() * 20) * box,
         y: Math.floor(Math.random() * 20) * box
