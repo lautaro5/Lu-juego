@@ -4,77 +4,17 @@
   <meta charset="UTF-8" />
   <title>Mini Juegos</title>
   <style>
-    body {
-      background-color: #111;
-      color: #fff;
-      font-family: sans-serif;
-      text-align: center;
-      margin: 0;
-      padding: 20px;
-    }
-    canvas {
-      background-color: black;
-      display: none;
-      margin: 20px auto 0 auto;
-      display: block;
-      border: 3px solid #fff;
-    }
-    .controls {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      margin: 24px auto 0 auto;
-      width: max-content;
-    }
-    .control-row {
-      display: flex;
-      justify-content: center;
-    }
-    .control-btn {
-      margin: 7px;
-      font-size: 2.5em;
-      width: 68px;
-      height: 68px;
-      border-radius: 18px;
-      border: none;
-      background: #222;
-      color: #fff;
-      box-shadow: 0 2px 10px #0006;
-      cursor: pointer;
-      transition: background 0.15s;
-      user-select: none;
-    }
-    .control-btn:active {
-      background: #555;
-    }
-    #minesweeper {
-      display: none;
-      margin: 20px auto;
-      border-collapse: collapse;
-    }
-    #minesweeper td {
-      width: 32px;
-      height: 32px;
-      background: #222;
-      border: 1px solid #444;
-      color: #fff;
-      font-size: 1.2em;
-      cursor: pointer;
-      text-align: center;
-      vertical-align: middle;
-      user-select: none;
-    }
-    #minesweeper td.revealed {
-      background: #333;
-      cursor: default;
-    }
-    #minesweeper td.mine {
-      background: #c00;
-    }
-    #minesweeper td.flagged {
-      background: #557;
-      color: #ff0;
-    }
+    body { background-color: #111; color: #fff; font-family: sans-serif; text-align: center; margin: 0; padding: 20px; }
+    canvas { background-color: black; display: none; margin: 20px auto 0 auto; display: block; border: 3px solid #fff; }
+    .controls { display: flex; flex-direction: column; align-items: center; margin: 24px auto 0 auto; width: max-content; }
+    .control-row { display: flex; justify-content: center; }
+    .control-btn { margin: 7px; font-size: 2.5em; width: 68px; height: 68px; border-radius: 18px; border: none; background: #222; color: #fff; box-shadow: 0 2px 10px #0006; cursor: pointer; transition: background 0.15s; user-select: none; }
+    .control-btn:active { background: #555; }
+    #minesweeper { display: none; margin: 20px auto; border-collapse: collapse; }
+    #minesweeper td { width: 32px; height: 32px; background: #222; border: 1px solid #444; color: #fff; font-size: 1.2em; cursor: pointer; text-align: center; vertical-align: middle; user-select: none; }
+    #minesweeper td.revealed { background: #333; cursor: default; }
+    #minesweeper td.mine { background: #c00; }
+    #minesweeper td.flagged { background: #557; color: #ff0; }
     @media (max-width: 700px) {
       canvas { width: 98vw !important; height: 98vw !important; max-width: 98vw; max-height:98vw;}
       #minesweeper td { width: 8vw; height: 8vw; font-size: 5vw;}
@@ -84,8 +24,6 @@
 <body>
   <h1>Mini Juegos</h1>
   <p id="status">Cargando Snake...</p>
-  
-  <!-- Snake -->
   <canvas id="snakeCanvas" width="600" height="600"></canvas>
   <div class="controls" id="snakeControls" style="display:none;">
     <div class="control-row">
@@ -100,108 +38,71 @@
       <button class="control-btn" data-dir="DOWN">▼</button>
     </div>
   </div>
-  
-  <!-- Buscaminas -->
   <table id="minesweeper"></table>
-  
   <script>
-    // ==== SNAKE ====
     let stage = "snake";
     const canvas = document.getElementById("snakeCanvas");
     const ctx = canvas.getContext("2d");
-    const box = 30;
-    const gridCount = 20;
-    const edgeMargin = 1;
-    let snake = [{ x: 10 * box, y: 10 * box }];
-    let direction = "RIGHT";
-    let fruit = {};
-    let score = 0;
-    const fruitTarget = 9; // juntar 9 frutas para ganar
-    
-    // Imagen manzana
+    const box = 30, gridCount = 20, edgeMargin = 1;
+    let snake = [{ x: 10 * box, y: 10 * box }], direction = "RIGHT";
+    let fruit = {}, score = 0, fruitTarget = 9;
+
+    // Cambia el nombre aquí si tu imagen es distinta
     const appleImg = new Image();
-    appleImg.src = "IMG_20250728_161829.png"; // cambia la ruta si es necesario
+    appleImg.src = "apple.png";
     appleImg.onload = startSnake;
     appleImg.onerror = () => {
-      document.getElementById("status").innerText =
-        "No se pudo cargar la imagen de la manzana.";
+      document.getElementById("status").innerText = "No se pudo cargar la imagen de la manzana. ¿Está el archivo apple.png en la carpeta?";
     };
-    
-    let lastMoveTime = 0;
-    const moveInterval = 140;
-    
+
+    let lastMoveTime = 0, moveInterval = 140;
+
     function randomFruitPosition() {
-      let min = edgeMargin;
-      let max = gridCount - 1 - edgeMargin;
-      let pos, collision;
+      let min = edgeMargin, max = gridCount - 1 - edgeMargin, pos, collision;
       do {
-        pos = {
-          x: Math.floor(Math.random() * (max - min + 1) + min) * box,
-          y: Math.floor(Math.random() * (max - min + 1) + min) * box
-        };
+        pos = { x: Math.floor(Math.random() * (max - min + 1) + min) * box, y: Math.floor(Math.random() * (max - min + 1) + min) * box };
         collision = snake.some(seg => seg.x === pos.x && seg.y === pos.y);
       } while (collision);
       return pos;
     }
-    
+
     function moveSnake() {
       let head = { x: snake[0].x, y: snake[0].y };
       if (direction === "LEFT") head.x -= box;
       if (direction === "UP") head.y -= box;
       if (direction === "RIGHT") head.x += box;
       if (direction === "DOWN") head.y += box;
-      
-      if (
-        head.x < 0 ||
-        head.x >= canvas.width ||
-        head.y < 0 ||
-        head.y >= canvas.height ||
-        snake.some(seg => seg.x === head.x && seg.y === head.y)
-      ) {
+      if (head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height || snake.some(seg => seg.x === head.x && seg.y === head.y)) {
         alert("¡Perdiste en Snake! Reiniciando...");
-        resetSnake();
-        return;
+        resetSnake(); return;
       }
-      
       snake.unshift(head);
-      
       if (head.x === fruit.x && head.y === fruit.y) {
         score++;
         if (score >= fruitTarget) {
           document.getElementById("status").innerText = "Ganaste Snake 🎉 ¡Ahora Buscaminas!";
-          setTimeout(() => {
-            startMinesweeper();
-          }, 1200);
-          return;
+          setTimeout(() => { startMinesweeper(); }, 1200); return;
         }
         fruit = randomFruitPosition();
-      } else {
-        snake.pop();
-      }
+      } else { snake.pop(); }
     }
-    
+
     function render() {
       if (stage !== "snake") return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      for (let i of snake) {
-        ctx.fillStyle = "lime";
-        ctx.fillRect(i.x, i.y, box, box);
-      }
+      for (let i of snake) { ctx.fillStyle = "lime"; ctx.fillRect(i.x, i.y, box, box); }
       ctx.drawImage(appleImg, fruit.x, fruit.y, box, box);
       if (stage === "snake") requestAnimationFrame(render);
     }
-    
+
     function gameLoop(now) {
       if (stage !== "snake") return;
       if (!lastMoveTime) lastMoveTime = now;
       const delta = now - lastMoveTime;
-      if (delta > moveInterval) {
-        moveSnake();
-        lastMoveTime = now;
-      }
+      if (delta > moveInterval) { moveSnake(); lastMoveTime = now; }
       if (stage === "snake") requestAnimationFrame(gameLoop);
     }
-    
+
     document.addEventListener("keydown", e => {
       if (stage !== "snake") return;
       if (e.key === "ArrowLeft" && direction !== "RIGHT") direction = "LEFT";
@@ -219,15 +120,11 @@
         if (dir === "DOWN" && direction !== "UP") direction = "DOWN";
       });
     });
-    
+
     function resetSnake() {
-      snake = [{ x: 10 * box, y: 10 * box }];
-      direction = "RIGHT";
-      fruit = randomFruitPosition();
-      score = 0;
+      snake = [{ x: 10 * box, y: 10 * box }]; direction = "RIGHT"; fruit = randomFruitPosition(); score = 0;
       document.getElementById("status").innerText = "Reintentando Snake...";
     }
-    
     function startSnake() {
       stage = "snake";
       canvas.style.display = "block";
@@ -238,12 +135,12 @@
       requestAnimationFrame(render);
       requestAnimationFrame(gameLoop);
     }
-    
-    // ==== BUSCAMINAS ====
+
+    // BUSCAMINAS
     const rows = 9, cols = 9, mines = 9;
     let board = [], revealed = [], flagged = [], mineLocations = [];
     let minesweeperGameOver = false, minesweeperGameWon = false;
-    
+
     function startMinesweeper() {
       stage = "minesweeper";
       canvas.style.display = "none";
@@ -253,23 +150,14 @@
       board = [], revealed = [], flagged = [], mineLocations = [];
       minesweeperGameOver = false; minesweeperGameWon = false;
       for (let i = 0; i < rows; i++) {
-        board[i] = [];
-        revealed[i] = [];
-        flagged[i] = [];
-        for (let j = 0; j < cols; j++) {
-          board[i][j] = 0;
-          revealed[i][j] = false;
-          flagged[i][j] = false;
-        }
+        board[i] = []; revealed[i] = []; flagged[i] = [];
+        for (let j = 0; j < cols; j++) { board[i][j] = 0; revealed[i][j] = false; flagged[i][j] = false; }
       }
       let planted = 0;
       while (planted < mines) {
-        let r = Math.floor(Math.random() * rows);
-        let c = Math.floor(Math.random() * cols);
+        let r = Math.floor(Math.random() * rows), c = Math.floor(Math.random() * cols);
         if (board[r][c] === "M") continue;
-        board[r][c] = "M";
-        mineLocations.push([r, c]);
-        planted++;
+        board[r][c] = "M"; mineLocations.push([r, c]); planted++;
       }
       for (let i = 0; i < rows; i++) {
         for (let j = 0; j < cols; j++) {
@@ -284,7 +172,7 @@
       }
       drawMinesweeper();
     }
-    
+
     function drawMinesweeper() {
       const table = document.getElementById("minesweeper");
       table.innerHTML = "";
@@ -292,8 +180,7 @@
         const tr = document.createElement("tr");
         for (let j = 0; j < cols; j++) {
           const td = document.createElement("td");
-          td.dataset.r = i;
-          td.dataset.c = j;
+          td.dataset.r = i; td.dataset.c = j;
           if (revealed[i][j]) {
             td.classList.add("revealed");
             if (board[i][j] === "M") {
@@ -312,16 +199,14 @@
         table.appendChild(tr);
       }
     }
-    
+
     document.getElementById("minesweeper").addEventListener("click", function(e) {
       if (minesweeperGameOver || minesweeperGameWon) return;
       const td = e.target;
       if (td.tagName !== "TD") return;
       const r = +td.dataset.r, c = +td.dataset.c;
       if (flagged[r][c] || revealed[r][c]) return;
-      revealCell(r, c);
-      drawMinesweeper();
-      checkWin();
+      revealCell(r, c); drawMinesweeper(); checkWin();
     });
     document.getElementById("minesweeper").addEventListener("contextmenu", function(e) {
       e.preventDefault();
@@ -330,33 +215,23 @@
       if (td.tagName !== "TD") return;
       const r = +td.dataset.r, c = +td.dataset.c;
       if (revealed[r][c]) return;
-      flagged[r][c] = !flagged[r][c];
-      drawMinesweeper();
-      checkWin();
+      flagged[r][c] = !flagged[r][c]; drawMinesweeper(); checkWin();
     });
-    
     let touchTimeout;
     document.getElementById("minesweeper").addEventListener("touchstart", function(e) {
       const td = e.target;
       if (td.tagName !== "TD") return;
       const r = +td.dataset.r, c = +td.dataset.c;
       if (revealed[r][c]) return;
-      touchTimeout = setTimeout(() => {
-        flagged[r][c] = !flagged[r][c];
-        drawMinesweeper();
-        checkWin();
-      }, 400);
+      touchTimeout = setTimeout(() => { flagged[r][c] = !flagged[r][c]; drawMinesweeper(); checkWin(); }, 400);
     });
-    document.getElementById("minesweeper").addEventListener("touchend", function(e) {
-      clearTimeout(touchTimeout);
-    });
-    
+    document.getElementById("minesweeper").addEventListener("touchend", function(e) { clearTimeout(touchTimeout); });
+
     function revealCell(r, c) {
       if (flagged[r][c] || revealed[r][c]) return;
       revealed[r][c] = true;
       if (board[r][c] === "M") {
-        minesweeperGameOver = true;
-        revealAllMines();
+        minesweeperGameOver = true; revealAllMines();
         document.getElementById("status").innerText = "¡Perdiste en Buscaminas! Tocá para reiniciar.";
         document.getElementById("minesweeper").addEventListener("click", reiniciarMinesweeper, { once: true });
         return;
@@ -364,33 +239,22 @@
       if (board[r][c] === 0) {
         for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
           let nr = r + dr, nc = c + dc;
-          if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && !revealed[nr][nc]) {
-            revealCell(nr, nc);
-          }
+          if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && !revealed[nr][nc]) revealCell(nr, nc);
         }
       }
     }
-    
-    function revealAllMines() {
-      for (let [r, c] of mineLocations) revealed[r][c] = true;
-      drawMinesweeper();
-    }
-    
+    function revealAllMines() { for (let [r, c] of mineLocations) revealed[r][c] = true; drawMinesweeper(); }
     function checkWin() {
       if (minesweeperGameOver) return;
       let unrevealed = 0;
-      for (let i = 0; i < rows; i++)
-        for (let j = 0; j < cols; j++)
-          if (!revealed[i][j] && board[i][j] !== "M") unrevealed++;
+      for (let i = 0; i < rows; i++) for (let j = 0; j < cols; j++) if (!revealed[i][j] && board[i][j] !== "M") unrevealed++;
       if (unrevealed === 0) {
         minesweeperGameWon = true;
         document.getElementById("status").innerText = "¡Ganaste Buscaminas! 🎉";
-        setTimeout(() => {
-          document.getElementById("status").innerText = "¡Completaste los minijuegos!";
-        }, 1200);
+        setTimeout(() => { document.getElementById("status").innerText = "¡Completaste los minijuegos!"; }, 1200);
       }
     }
-    
-    function reiniciarMinesweeper() {
-      startMinesweeper();
-    }
+    function reiniciarMinesweeper() { startMinesweeper(); }
+  </script>
+</body>
+</html>
