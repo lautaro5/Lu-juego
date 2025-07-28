@@ -2,186 +2,288 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Buscaminas Clásico</title>
+  <title>Snake + Buscaminas</title>
   <style>
-    body {
-      background: #111;
-      color: #fff;
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
       font-family: sans-serif;
+    }
+    body {
       display: flex;
       flex-direction: column;
       align-items: center;
-      margin: 0;
-      padding: 1em;
+      justify-content: center;
+      height: 100vh;
+      background: #111;
+      color: white;
     }
-    h1 {
-      margin-bottom: 1em;
+    canvas {
+      background: #000;
+      margin-bottom: 20px;
+      touch-action: none;
+    }
+    #gameContainer {
+      display: none;
     }
     table {
       border-collapse: collapse;
-      touch-action: manipulation;
     }
     td {
-      width: 48px;
-      height: 48px;
-      background: #333;
-      border: 1px solid #555;
+      width: 32px;
+      height: 32px;
       text-align: center;
       vertical-align: middle;
-      font-size: 1.5em;
-      user-select: none;
-      transition: background 0.1s;
-    }
-    td.open {
+      border: 1px solid #555;
       background: #999;
-      color: black;
+      font-weight: bold;
+      font-size: 20px;
+      user-select: none;
+    }
+    td.revealed {
+      background: #ddd;
     }
     td.mine {
       background: red;
     }
-    td.flag::after {
-      content: "🚩";
+    td.flag {
+      background: orange;
     }
   </style>
 </head>
 <body>
-  <h1>Buscaminas</h1>
-  <table id="minesweeper"></table>
-  <script>
-    const rows = 9, cols = 9, mines = 9;
-    let board = [];
-    let table = document.getElementById("minesweeper");function initBoard() {
-  board = [];
-  table.innerHTML = "";
-  for (let r = 0; r < rows; r++) {
-    let row = [];
-    let tr = document.createElement("tr");
-    for (let c = 0; c < cols; c++) {
-      let cell = {
-        row: r,
-        col: c,
-        mine: false,
-        open: false,
-        flag: false,
-        element: document.createElement("td"),
-      };
-      cell.element.addEventListener("click", () => handleClick(cell));
-      cell.element.addEventListener("contextmenu", e => {
-        e.preventDefault();
-        toggleFlag(cell);
-      });
-      cell.element.addEventListener("touchstart", e => {
-        cell.touchStart = Date.now();
-      });
-      cell.element.addEventListener("touchend", e => {
-        if (Date.now() - cell.touchStart > 500) {
-          toggleFlag(cell);
-        } else {
-          handleClick(cell);
+  <canvas id="snake" width="320" height="320"></canvas>
+  <div id="gameContainer">
+    <table id="grid"></table>
+  </div>  <script>
+    // SNAKE GAME
+    const canvas = document.getElementById("snake");
+    const ctx = canvas.getContext("2d");
+    const box = 32;
+    let snake = [{ x: 5 * box, y: 5 * box }];
+    let direction = "RIGHT";
+    let fruit = {
+      x: Math.floor(Math.random() * 10) * box,
+      y: Math.floor(Math.random() * 10) * box,
+    };
+    let score = 0;
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowLeft" && direction !== "RIGHT") direction = "LEFT";
+      if (e.key === "ArrowUp" && direction !== "DOWN") direction = "UP";
+      if (e.key === "ArrowRight" && direction !== "LEFT") direction = "RIGHT";
+      if (e.key === "ArrowDown" && direction !== "UP") direction = "DOWN";
+    });
+
+    function draw() {
+      ctx.fillStyle = "#000";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      for (let i = 0; i < snake.length; i++) {
+        ctx.fillStyle = i === 0 ? "lime" : "green";
+        ctx.fillRect(snake[i].x, snake[i].y, box, box);
+      }
+
+      ctx.fillStyle = "red";
+      ctx.fillRect(fruit.x, fruit.y, box, box);
+
+      let head = { x: snake[0].x, y: snake[0].y };
+      if (direction === "LEFT") head.x -= box;
+      if (direction === "UP") head.y -= box;
+      if (direction === "RIGHT") head.x += box;
+      if (direction === "DOWN") head.y += box;
+
+      if (head.x === fruit.x && head.y === fruit.y) {
+        score++;
+        if (score === 9) {
+          clearInterval(snakeGame);
+          canvas.style.display = "none";
+          document.getElementById("gameContainer").style.display = "block";
+          initMinesweeper();
+          return;
         }
-      });
-      cell.element.addEventListener("dblclick", () => handleNumberClick(cell));
-      tr.appendChild(cell.element);
-      row.push(cell);
-    }
-    board.push(row);
-    table.appendChild(tr);
-  }
-  placeMines();
-}
+        fruit = {
+          x: Math.floor(Math.random() * 10) * box,
+          y: Math.floor(Math.random() * 10) * box,
+        };
+      } else {
+        snake.pop();
+      }
 
-function placeMines() {
-  let placed = 0;
-  while (placed < mines) {
-    let r = Math.floor(Math.random() * rows);
-    let c = Math.floor(Math.random() * cols);
-    if (!board[r][c].mine) {
-      board[r][c].mine = true;
-      placed++;
-    }
-  }
-}
+      snake.unshift(head);
 
-function getNeighbors(cell) {
-  let neighbors = [];
-  for (let dr = -1; dr <= 1; dr++) {
-    for (let dc = -1; dc <= 1; dc++) {
-      if (dr === 0 && dc === 0) continue;
-      let nr = cell.row + dr;
-      let nc = cell.col + dc;
-      if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
-        neighbors.push(board[nr][nc]);
+      if (
+        head.x < 0 ||
+        head.y < 0 ||
+        head.x >= canvas.width ||
+        head.y >= canvas.height ||
+        snake.slice(1).some((s) => s.x === head.x && s.y === head.y)
+      ) {
+        clearInterval(snakeGame);
+        alert("Game Over en Snake");
+        location.reload();
       }
     }
-  }
-  return neighbors;
-}
 
-function countMines(cell) {
-  return getNeighbors(cell).filter(n => n.mine).length;
-}
+    let snakeGame = setInterval(draw, 200);
 
-function toggleFlag(cell) {
-  if (cell.open) return;
-  cell.flag = !cell.flag;
-  cell.element.classList.toggle("flag", cell.flag);
-}
+    // MINESWEEPER
+    let grid = [], flags = 0;
+    const rows = 9, cols = 9, mines = 9;
+    const table = document.getElementById("grid");
 
-function handleClick(cell) {
-  if (cell.open || cell.flag) return;
-  if (cell.mine) {
-    revealMines();
-    alert("¡Perdiste!");
-    setTimeout(initBoard, 1000);
-    return;
-  }
-  openCell(cell);
-  checkWin();
-}
-
-function handleNumberClick(cell) {
-  if (!cell.open) return;
-  const neighbors = getNeighbors(cell);
-  const flagged = neighbors.filter(n => n.flag).length;
-  const mineCount = countMines(cell);
-  if (flagged === mineCount) {
-    neighbors.forEach(n => {
-      if (!n.open && !n.flag) handleClick(n);
-    });
-  }
-}
-
-function openCell(cell) {
-  if (cell.open || cell.flag) return;
-  cell.open = true;
-  cell.element.classList.add("open");
-  const minesAround = countMines(cell);
-  if (minesAround > 0) {
-    cell.element.textContent = minesAround;
-  } else {
-    getNeighbors(cell).forEach(openCell);
-  }
-}
-
-function revealMines() {
-  board.flat().forEach(cell => {
-    if (cell.mine) {
-      cell.element.classList.add("mine");
-      cell.element.textContent = "💣";
+    function initMinesweeper() {
+      table.innerHTML = "";
+      grid = [];
+      flags = 0;
+      for (let r = 0; r < rows; r++) {
+        const row = [];
+        const tr = document.createElement("tr");
+        for (let c = 0; c < cols; c++) {
+          const td = document.createElement("td");
+          td.dataset.row = r;
+          td.dataset.col = c;
+          td.addEventListener("click", onClick);
+          td.addEventListener("contextmenu", (e) => {
+            e.preventDefault();
+            toggleFlag(td);
+          });
+          td.addEventListener("dblclick", onDoubleClick);
+          tr.appendChild(td);
+          row.push({ mine: false, revealed: false, flagged: false, number: 0 });
+        }
+        table.appendChild(tr);
+        grid.push(row);
+      }
+      placeMines();
     }
-  });
-}
 
-function checkWin() {
-  let unopened = board.flat().filter(c => !c.open);
-  if (unopened.length === mines) {
-    alert("¡Ganaste!");
-    setTimeout(initBoard, 1000);
-  }
-}
+    function placeMines() {
+      let placed = 0;
+      while (placed < mines) {
+        const r = Math.floor(Math.random() * rows);
+        const c = Math.floor(Math.random() * cols);
+        if (!grid[r][c].mine) {
+          grid[r][c].mine = true;
+          placed++;
+          for (let i = -1; i <= 1; i++) {
+            for (let j = -1; j <= 1; j++) {
+              const nr = r + i, nc = c + j;
+              if (
+                nr >= 0 && nr < rows &&
+                nc >= 0 && nc < cols &&
+                !(i === 0 && j === 0)
+              ) {
+                grid[nr][nc].number++;
+              }
+            }
+          }
+        }
+      }
+    }
 
-initBoard();
+    function onClick(e) {
+      const td = e.currentTarget;
+      const r = +td.dataset.row;
+      const c = +td.dataset.col;
+      const cell = grid[r][c];
+      if (cell.revealed || cell.flagged) return;
+      reveal(r, c);
+    }
 
-  </script>
-</body>
+    function toggleFlag(td) {
+      const r = +td.dataset.row;
+      const c = +td.dataset.col;
+      const cell = grid[r][c];
+      if (cell.revealed) return;
+      cell.flagged = !cell.flagged;
+      td.classList.toggle("flag");
+      td.textContent = cell.flagged ? "🚩" : "";
+    }
+
+    function onDoubleClick(e) {
+      const td = e.currentTarget;
+      const r = +td.dataset.row;
+      const c = +td.dataset.col;
+      const cell = grid[r][c];
+      if (!cell.revealed || cell.number === 0) return;
+      let flagsAround = 0;
+      for (let i = -1; i <= 1; i++) {
+        for (let j = -1; j <= 1; j++) {
+          const nr = r + i, nc = c + j;
+          if (
+            nr >= 0 && nr < rows &&
+            nc >= 0 && nc < cols &&
+            grid[nr][nc].flagged
+          ) flagsAround++;
+        }
+      }
+      if (flagsAround === cell.number) {
+        for (let i = -1; i <= 1; i++) {
+          for (let j = -1; j <= 1; j++) {
+            const nr = r + i, nc = c + j;
+            if (
+              nr >= 0 && nr < rows &&
+              nc >= 0 && nc < cols &&
+              !grid[nr][nc].flagged
+            ) {
+              reveal(nr, nc);
+            }
+          }
+        }
+      }
+    }
+
+    function reveal(r, c) {
+      const td = table.rows[r].cells[c];
+      const cell = grid[r][c];
+      if (cell.revealed || cell.flagged) return;
+      cell.revealed = true;
+      td.classList.add("revealed");
+      if (cell.mine) {
+        td.classList.add("mine");
+        td.textContent = "💣";
+        alert("Perdiste");
+        revealAll();
+        return;
+      }
+      if (cell.number > 0) {
+        td.textContent = cell.number;
+      } else {
+        for (let i = -1; i <= 1; i++) {
+          for (let j = -1; j <= 1; j++) {
+            const nr = r + i, nc = c + j;
+            if (
+              nr >= 0 && nr < rows &&
+              nc >= 0 && nc < cols &&
+              !(i === 0 && j === 0)
+            ) reveal(nr, nc);
+          }
+        }
+      }
+      checkWin();
+    }
+
+    function revealAll() {
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          if (!grid[r][c].revealed) reveal(r, c);
+        }
+      }
+    }
+
+    function checkWin() {
+      let unrevealed = 0;
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          if (!grid[r][c].revealed && !grid[r][c].mine) unrevealed++;
+        }
+      }
+      if (unrevealed === 0) {
+        alert("¡Ganaste!");
+        revealAll();
+      }
+    }
+  </script></body>
 </html>
