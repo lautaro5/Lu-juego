@@ -5,128 +5,179 @@
   <title>Buscaminas Clásico</title>
   <style>
     body {
-      font-family: sans-serif;
       background: #111;
-      color: white;
-      text-align: center;
+      color: #fff;
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 0;
+      padding: 1em;
+    }
+    h1 {
+      margin-bottom: 1em;
     }
     table {
-      margin: 20px auto;
-      border-spacing: 0;
+      border-collapse: collapse;
+      touch-action: manipulation;
     }
     td {
-      width: 40px;
-      height: 40px;
+      width: 48px;
+      height: 48px;
+      background: #333;
       border: 1px solid #555;
-      background: #444;
-      color: white;
-      font-weight: bold;
-      font-size: 20px;
       text-align: center;
       vertical-align: middle;
+      font-size: 1.5em;
       user-select: none;
+      transition: background 0.1s;
     }
-    td.revealed {
-      background: #222;
+    td.open {
+      background: #999;
+      color: black;
+    }
+    td.mine {
+      background: red;
+    }
+    td.flag::after {
+      content: "🚩";
     }
   </style>
 </head>
 <body>
   <h1>Buscaminas</h1>
-  <table id="board"></table>
+  <table id="minesweeper"></table>
   <script>
-    const rows = 9;
-    const cols = 9;
-    const mines = 9;
-    let board = document.getElementById("board");
-    let grid = [];
-    let revealed = [];
-    let firstClick = true;function initBoard() {
-  board.innerHTML = "";
-  grid = Array(rows).fill().map(() => Array(cols).fill(0));
-  revealed = Array(rows).fill().map(() => Array(cols).fill(false));
-  for (let i = 0; i < rows; i++) {
+    const rows = 9, cols = 9, mines = 9;
+    let board = [];
+    let table = document.getElementById("minesweeper");function initBoard() {
+  board = [];
+  table.innerHTML = "";
+  for (let r = 0; r < rows; r++) {
+    let row = [];
     let tr = document.createElement("tr");
-    for (let j = 0; j < cols; j++) {
-      let td = document.createElement("td");
-      td.dataset.i = i;
-      td.dataset.j = j;
-      td.addEventListener("click", cellClick);
-      td.addEventListener("contextmenu", markCell);
-      tr.appendChild(td);
+    for (let c = 0; c < cols; c++) {
+      let cell = {
+        row: r,
+        col: c,
+        mine: false,
+        open: false,
+        flag: false,
+        element: document.createElement("td"),
+      };
+      cell.element.addEventListener("click", () => handleClick(cell));
+      cell.element.addEventListener("contextmenu", e => {
+        e.preventDefault();
+        toggleFlag(cell);
+      });
+      cell.element.addEventListener("touchstart", e => {
+        cell.touchStart = Date.now();
+      });
+      cell.element.addEventListener("touchend", e => {
+        if (Date.now() - cell.touchStart > 500) {
+          toggleFlag(cell);
+        } else {
+          handleClick(cell);
+        }
+      });
+      cell.element.addEventListener("dblclick", () => handleNumberClick(cell));
+      tr.appendChild(cell.element);
+      row.push(cell);
     }
-    board.appendChild(tr);
+    board.push(row);
+    table.appendChild(tr);
   }
+  placeMines();
 }
 
-function placeMines(excludeI, excludeJ) {
+function placeMines() {
   let placed = 0;
   while (placed < mines) {
-    let i = Math.floor(Math.random() * rows);
-    let j = Math.floor(Math.random() * cols);
-    if ((i !== excludeI || j !== excludeJ) && grid[i][j] !== "M") {
-      grid[i][j] = "M";
+    let r = Math.floor(Math.random() * rows);
+    let c = Math.floor(Math.random() * cols);
+    if (!board[r][c].mine) {
+      board[r][c].mine = true;
       placed++;
     }
   }
-  for (let i = 0; i < rows; i++) {
-    for (let j = 0; j < cols; j++) {
-      if (grid[i][j] === "M") continue;
-      let count = 0;
-      for (let di = -1; di <= 1; di++) {
-        for (let dj = -1; dj <= 1; dj++) {
-          let ni = i + di;
-          let nj = j + dj;
-          if (ni >= 0 && ni < rows && nj >= 0 && nj < cols && grid[ni][nj] === "M") {
-            count++;
-          }
-        }
-      }
-      grid[i][j] = count;
-    }
-  }
 }
 
-function reveal(i, j) {
-  if (i < 0 || i >= rows || j < 0 || j >= cols || revealed[i][j]) return;
-  let cell = board.children[i].children[j];
-  revealed[i][j] = true;
-  cell.classList.add("revealed");
-  if (grid[i][j] === "M") {
-    cell.textContent = "💣";
-    alert("Perdiste");
-    initBoard();
-    firstClick = true;
+function getNeighbors(cell) {
+  let neighbors = [];
+  for (let dr = -1; dr <= 1; dr++) {
+    for (let dc = -1; dc <= 1; dc++) {
+      if (dr === 0 && dc === 0) continue;
+      let nr = cell.row + dr;
+      let nc = cell.col + dc;
+      if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
+        neighbors.push(board[nr][nc]);
+      }
+    }
+  }
+  return neighbors;
+}
+
+function countMines(cell) {
+  return getNeighbors(cell).filter(n => n.mine).length;
+}
+
+function toggleFlag(cell) {
+  if (cell.open) return;
+  cell.flag = !cell.flag;
+  cell.element.classList.toggle("flag", cell.flag);
+}
+
+function handleClick(cell) {
+  if (cell.open || cell.flag) return;
+  if (cell.mine) {
+    revealMines();
+    alert("¡Perdiste!");
+    setTimeout(initBoard, 1000);
     return;
   }
-  if (grid[i][j] > 0) {
-    cell.textContent = grid[i][j];
+  openCell(cell);
+  checkWin();
+}
+
+function handleNumberClick(cell) {
+  if (!cell.open) return;
+  const neighbors = getNeighbors(cell);
+  const flagged = neighbors.filter(n => n.flag).length;
+  const mineCount = countMines(cell);
+  if (flagged === mineCount) {
+    neighbors.forEach(n => {
+      if (!n.open && !n.flag) handleClick(n);
+    });
+  }
+}
+
+function openCell(cell) {
+  if (cell.open || cell.flag) return;
+  cell.open = true;
+  cell.element.classList.add("open");
+  const minesAround = countMines(cell);
+  if (minesAround > 0) {
+    cell.element.textContent = minesAround;
   } else {
-    for (let di = -1; di <= 1; di++) {
-      for (let dj = -1; dj <= 1; dj++) {
-        reveal(i + di, j + dj);
-      }
+    getNeighbors(cell).forEach(openCell);
+  }
+}
+
+function revealMines() {
+  board.flat().forEach(cell => {
+    if (cell.mine) {
+      cell.element.classList.add("mine");
+      cell.element.textContent = "💣";
     }
-  }
+  });
 }
 
-function cellClick(e) {
-  let i = parseInt(this.dataset.i);
-  let j = parseInt(this.dataset.j);
-  if (firstClick) {
-    placeMines(i, j);
-    firstClick = false;
+function checkWin() {
+  let unopened = board.flat().filter(c => !c.open);
+  if (unopened.length === mines) {
+    alert("¡Ganaste!");
+    setTimeout(initBoard, 1000);
   }
-  reveal(i, j);
-}
-
-function markCell(e) {
-  e.preventDefault();
-  let i = parseInt(this.dataset.i);
-  let j = parseInt(this.dataset.j);
-  let cell = board.children[i].children[j];
-  if (revealed[i][j]) return;
-  cell.textContent = cell.textContent === "🚩" ? "" : "🚩";
 }
 
 initBoard();
