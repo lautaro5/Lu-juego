@@ -185,7 +185,7 @@
       score = 0;
       document.getElementById("status").innerText = "Reintentando Snake...";
       clearInterval(interval);
-      interval = setInterval(drawSnake, 100);
+      interval = setInterval(drawSnake, 180); // Más lento
     }
 
     function startSnake() {
@@ -193,7 +193,7 @@
       document.getElementById("snakeControls").style.display = "flex";
       document.getElementById("status").innerText = "Jugá Snake: juntá 9 frutas 🍎";
       clearInterval(interval);
-      interval = setInterval(drawSnake, 100);
+      interval = setInterval(drawSnake, 180); // Más lento
     }
 
     // --------- Minesweeper ----------
