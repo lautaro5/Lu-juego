@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Mini Juegos</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #111;
+      color: white;
+      text-align: center;
+      margin: 0;
+    }
+    canvas, table {
+      margin-top: 20px;
+      border: 2px solid #fff;
+    }
+    #snakeCanvas {
+      display: none;
+      background: black;
+    }
+    #minesweeper {
+      display: none;
+      margin: auto;
+      border-collapse: collapse;
+    }
+    #minesweeper td {
+      width: 40px;
+      height: 40px;
+      border: 1px solid #555;
+      text-align: center;
+      font-size: 18px;
+      background: #333;
+      color: white;
+      cursor: pointer;
+    }
+    #status {
+      font-size: 24px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Mini Juegos</h1>
+  <p id="status">Comenzando Snake...</p>
+  <canvas id="snakeCanvas" width="400" height="400"></canvas>
+  <table id="minesweeper"></table>
+
+  <script>
+    // ---------- JUEGO 1: SNAKE ----------
+    const canvas = document.getElementById("snakeCanvas");
+    const ctx = canvas.getContext("2d");
+    const box = 20;
+    const fruitCountToWin = 9;
+
+    let snake = [{ x: 5 * box, y: 5 * box }];
+    let direction = null;
+    let fruit = {
+      x: Math.floor(Math.random() * 20) * box,
+      y: Math.floor(Math.random() * 20) * box
+    };
+    let score = 0;
+
+    function drawSnakeGame() {
+      ctx.clearRect(0, 0, 400, 400);
+
+      for (let s of snake) {
+        ctx.fillStyle = "lime";
+        ctx.fillRect(s.x, s.y, box, box);
+      }
+
+      ctx.fillStyle = "red";
+      ctx.fillRect(fruit.x, fruit.y, box, box);
+
+      let head = { x: snake[0].x, y: snake[0].y };
+
+      if (direction === "LEFT") head.x -= box;
+      if (direction === "UP") head.y -= box;
+      if (direction === "RIGHT") head.x += box;
+      if (direction === "DOWN") head.y += box;
+
+      // Colisiones
+      if (
+        head.x < 0 || head.x >= 400 || head.y < 0 || head.y >= 400 ||
+        snake.some(s => s.x === head.x && s.y === head.y)
+      ) {
+        resetSnakeGame("¡Perdiste! Reiniciando Snake...");
+        return;
+      }
+
+      snake.unshift(head);
+
+      if (head.x === fruit.x && head.y === fruit.y) {
+        score++;
+        if (score >= fruitCountToWin) {
+          document.getElementById("status").innerText = "Ganaste Snake. ¡Vamos al Busca Minas!";
+          clearInterval(snakeGame);
+          setTimeout(startMinesweeper, 2000);
+          return;
+        }
+        fruit = {
+          x: Math.floor(Math.random() * 20) * box,
+          y: Math.floor(Math.random() * 20) * box
+        };
+      } else {
+        snake.pop();
+      }
+    }
+
+    document.addEventListener("keydown", e => {
+      if (e.key === "ArrowLeft" && direction !== "RIGHT") direction = "LEFT";
+      if (e.key === "ArrowUp" && direction !== "DOWN") direction = "UP";
+      if (e.key === "ArrowRight" && direction !== "LEFT") direction = "RIGHT";
+      if (e.key === "ArrowDown" && direction !== "UP") direction = "DOWN";
+    });
+
+    function resetSnakeGame(msg) {
+      clearInterval(snakeGame);
+      alert(msg);
+      snake = [{ x: 5 * box, y: 5 * box }];
+      direction = null;
+      score = 0;
+      fruit = {
+        x: Math.floor(Math.random() * 20) * box,
+        y: Math.floor(Math.random() * 20) * box
+      };
+      document.getElementById("status").innerText = "Intentá de nuevo...";
+      snakeGame = setInterval(drawSnakeGame, 100);
+    }
+
+    // ---------- JUEGO 2: BUSCAMINAS ----------
+    const table = document.getElementById("minesweeper");
+    const rows = 9, cols = 9, mineCount = 9;
+    let mines = [];
+    let revealed = 0;
+
+    function startMinesweeper() {
+      canvas.style.display = "none";
+      table.style.display = "table";
+      document.getElementById("status").innerText = "Buscaminas: ¡evitá las minas!";
+      mines = [];
+      revealed = 0;
+      table.innerHTML = "";
+
+      // Generar minas
+      while (mines.length < mineCount) {
+        let pos = Math.floor(Math.random() * rows * cols);
+        if (!mines.includes(pos)) mines.push(pos);
+      }
+
+      for (let r = 0; r < rows; r++) {
+        let tr = document.createElement("tr");
+        for (let c = 0; c < cols; c++) {
+          let td = document.createElement("td");
+          td.dataset.index = r * cols + c;
+          td.addEventListener("click", () => reveal(td));
+          tr.appendChild(td);
+        }
+        table.appendChild(tr);
+      }
+    }
+
+    function reveal(cell) {
+      const index = parseInt(cell.dataset.index);
+      if (mines.includes(index)) {
+        alert("¡BOOM! Perdiste en Buscaminas.");
+        startMinesweeper();
+        return;
+      }
+
+      if (!cell.classList.contains("revealed")) {
+        cell.classList.add("revealed");
+        cell.style.background = "#0a0";
+        revealed++;
+
+        if (revealed >= rows * cols - mineCount) {
+          alert("¡Ganaste el Buscaminas!");
+          document.getElementById("status").innerText = "¡Ganaste ambos juegos!";
+          table.style.display = "none";
+        }
+      }
+    }
+
+    // ---------- INICIO ----------
+    canvas.style.display = "block";
+    let snakeGame = setInterval(drawSnakeGame, 100);
+  </script>
+</body>
+</html>
