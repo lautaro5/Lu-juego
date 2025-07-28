@@ -5,54 +5,53 @@
   <title>Mini Juegos</title>
   <style>
     body {
+      background-color: #111;
+      color: #fff;
       font-family: sans-serif;
-      background: #111;
-      color: white;
       text-align: center;
       margin: 0;
+      padding: 20px;
     }
-    canvas, table {
-      margin-top: 20px;
-      border: 2px solid #fff;
-    }
-    #snakeCanvas {
+    canvas {
+      background-color: black;
       display: none;
-      background: black;
+      margin-top: 20px;
     }
     #minesweeper {
       display: none;
-      margin: auto;
+      margin: 20px auto;
       border-collapse: collapse;
     }
     #minesweeper td {
       width: 40px;
       height: 40px;
-      border: 1px solid #555;
       text-align: center;
-      font-size: 18px;
-      background: #333;
-      color: white;
+      font-size: 20px;
+      background-color: #333;
+      border: 1px solid #555;
       cursor: pointer;
+      color: white;
+    }
+    #minesweeper td.revealed {
+      background-color: #0a0;
     }
     #status {
-      font-size: 24px;
       margin-top: 10px;
+      font-size: 20px;
     }
   </style>
 </head>
 <body>
   <h1>Mini Juegos</h1>
-  <p id="status">Comenzando Snake...</p>
+  <p id="status">Cargando Snake...</p>
   <canvas id="snakeCanvas" width="400" height="400"></canvas>
   <table id="minesweeper"></table>
 
   <script>
-    // ---------- JUEGO 1: SNAKE ----------
+    // --------- Snake Game ----------
     const canvas = document.getElementById("snakeCanvas");
     const ctx = canvas.getContext("2d");
     const box = 20;
-    const fruitCountToWin = 9;
-
     let snake = [{ x: 5 * box, y: 5 * box }];
     let direction = null;
     let fruit = {
@@ -60,13 +59,14 @@
       y: Math.floor(Math.random() * 20) * box
     };
     let score = 0;
+    const fruitTarget = 9;
+    let interval;
 
-    function drawSnakeGame() {
-      ctx.clearRect(0, 0, 400, 400);
-
-      for (let s of snake) {
+    function drawSnake() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (let i of snake) {
         ctx.fillStyle = "lime";
-        ctx.fillRect(s.x, s.y, box, box);
+        ctx.fillRect(i.x, i.y, box, box);
       }
 
       ctx.fillStyle = "red";
@@ -79,12 +79,13 @@
       if (direction === "RIGHT") head.x += box;
       if (direction === "DOWN") head.y += box;
 
-      // Colisiones
       if (
-        head.x < 0 || head.x >= 400 || head.y < 0 || head.y >= 400 ||
-        snake.some(s => s.x === head.x && s.y === head.y)
+        head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height ||
+        snake.some(seg => seg.x === head.x && seg.y === head.y)
       ) {
-        resetSnakeGame("¡Perdiste! Reiniciando Snake...");
+        clearInterval(interval);
+        alert("¡Perdiste en Snake! Reiniciando...");
+        resetSnake();
         return;
       }
 
@@ -92,10 +93,10 @@
 
       if (head.x === fruit.x && head.y === fruit.y) {
         score++;
-        if (score >= fruitCountToWin) {
-          document.getElementById("status").innerText = "Ganaste Snake. ¡Vamos al Busca Minas!";
-          clearInterval(snakeGame);
-          setTimeout(startMinesweeper, 2000);
+        if (score >= fruitTarget) {
+          clearInterval(interval);
+          document.getElementById("status").innerText = "¡Ganaste Snake! Cargando Buscaminas...";
+          setTimeout(startMinesweeper, 1500);
           return;
         }
         fruit = {
@@ -114,21 +115,25 @@
       if (e.key === "ArrowDown" && direction !== "UP") direction = "DOWN";
     });
 
-    function resetSnakeGame(msg) {
-      clearInterval(snakeGame);
-      alert(msg);
+    function resetSnake() {
       snake = [{ x: 5 * box, y: 5 * box }];
       direction = null;
-      score = 0;
       fruit = {
         x: Math.floor(Math.random() * 20) * box,
         y: Math.floor(Math.random() * 20) * box
       };
-      document.getElementById("status").innerText = "Intentá de nuevo...";
-      snakeGame = setInterval(drawSnakeGame, 100);
+      score = 0;
+      document.getElementById("status").innerText = "Reintentando Snake...";
+      interval = setInterval(drawSnake, 100);
     }
 
-    // ---------- JUEGO 2: BUSCAMINAS ----------
+    function startSnake() {
+      canvas.style.display = "block";
+      document.getElementById("status").innerText = "Jugá Snake: juntá 9 frutas 🍎";
+      interval = setInterval(drawSnake, 100);
+    }
+
+    // --------- Minesweeper ----------
     const table = document.getElementById("minesweeper");
     const rows = 9, cols = 9, mineCount = 9;
     let mines = [];
@@ -137,12 +142,12 @@
     function startMinesweeper() {
       canvas.style.display = "none";
       table.style.display = "table";
-      document.getElementById("status").innerText = "Buscaminas: ¡evitá las minas!";
+      document.getElementById("status").innerText = "Buscaminas: evitá las 9 minas 💣";
+      table.innerHTML = "";
       mines = [];
       revealed = 0;
-      table.innerHTML = "";
 
-      // Generar minas
+      // generar minas
       while (mines.length < mineCount) {
         let pos = Math.floor(Math.random() * rows * cols);
         if (!mines.includes(pos)) mines.push(pos);
@@ -152,38 +157,38 @@
         let tr = document.createElement("tr");
         for (let c = 0; c < cols; c++) {
           let td = document.createElement("td");
-          td.dataset.index = r * cols + c;
-          td.addEventListener("click", () => reveal(td));
+          let index = r * cols + c;
+          td.dataset.index = index;
+          td.addEventListener("click", () => clickCell(td, index));
           tr.appendChild(td);
         }
         table.appendChild(tr);
       }
     }
 
-    function reveal(cell) {
-      const index = parseInt(cell.dataset.index);
+    function clickCell(cell, index) {
+      if (cell.classList.contains("revealed")) return;
+
       if (mines.includes(index)) {
-        alert("¡BOOM! Perdiste en Buscaminas.");
+        alert("¡BOOM! Tocaste una mina. Reiniciando Buscaminas...");
         startMinesweeper();
         return;
       }
 
-      if (!cell.classList.contains("revealed")) {
-        cell.classList.add("revealed");
-        cell.style.background = "#0a0";
-        revealed++;
+      cell.classList.add("revealed");
+      revealed++;
 
-        if (revealed >= rows * cols - mineCount) {
-          alert("¡Ganaste el Buscaminas!");
-          document.getElementById("status").innerText = "¡Ganaste ambos juegos!";
-          table.style.display = "none";
-        }
+      if (revealed === rows * cols - mineCount) {
+        alert("¡Ganaste Buscaminas!");
+        document.getElementById("status").innerText = "🎉 ¡Ganaste ambos juegos!";
+        table.style.display = "none";
       }
     }
 
-    // ---------- INICIO ----------
-    canvas.style.display = "block";
-    let snakeGame = setInterval(drawSnakeGame, 100);
+    // --------- Iniciar Snake al cargar ---------
+    window.onload = () => {
+      startSnake();
+    };
   </script>
 </body>
 </html>
